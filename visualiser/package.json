@@ -1,0 +1,21 @@
+{
+  "name": "byop-visualiser",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Visualiser for Bring Your Own Pixel distributed lighting",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "ws"
+  },
+  "author": "Andrew Shirley <andrew@als-bi.com>",
+  "license": "ISC",
+  "dependencies": {
+    "lit": "^3.1.1",
+    "three": "^0.160.1"
+  },
+  "devDependencies": {
+    "eslint": "^8.56.0",
+    "local-web-server": "^5.3.0"
+  }
+}

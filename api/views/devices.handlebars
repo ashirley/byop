@@ -1,0 +1,17 @@
+<h1>Devices</h1>
+{{#each existingDevices}}
+<div>
+  <ul>
+    <li>id: {{ id }}</li>
+    <li>location: ({{ location.x }}, {{ location.y }})</li>
+    <li>ipAddr: {{ ipAddr }}</li>
+  </ul>
+</div>
+{{/each}}
+<form method="POST">
+  <input name="id"/>
+  <input name="x"/>
+  <input name="y"/>
+  <input name="ipAddr"/>
+  <input type="submit"/>
+</form>

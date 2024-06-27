@@ -1,20 +1,16 @@
 {
   "name": "byop",
-  "version": "1.0.0",
-  "description": "Bring Your Own Pixel distributed lighting",
-  "main": "index.js",
+  "private": true,
+  "workspaces": [
+    "visualiser",
+    "api"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "serve": "node_modules/.bin/ws"
-  },
-  "author": "Andrew Shirley <andrew@als-bi.com>",
-  "license": "ISC",
-  "dependencies": {
-    "lit": "^3.1.1",
-    "three": "^0.160.1"
+    "start": "concurrently -k npm:start:*",
+    "start:visualiser": "cd visualiser && npm run start",
+    "start:api": "cd api && npm run start"
   },
   "devDependencies": {
-    "eslint": "^8.56.0",
-    "local-web-server": "^5.3.0"
+    "concurrently": "^8.2.2"
   }
 }

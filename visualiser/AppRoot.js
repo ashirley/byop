@@ -2,8 +2,35 @@
 import { LitElement, html, css } from "lit";
 
 import { ThreeRender } from "./ThreeRender.js";
+import { pixels as demoDataPixels } from "./DemoData.js";
 
 export class AppRoot extends LitElement {
+  static properties = {
+    _devices: { state: true },
+    _demoMode: { state: true },
+  };
+
+  constructor() {
+    super();
+
+    this._devices = null;
+    this._demoMode = false;
+    const url = "http://localhost:3000/visualiser/api/pixelDataFeed";
+    const webSocket = new WebSocket(url);
+
+    webSocket.onmessage = (event) => {
+      console.log("updated from ws", event.data);
+      this._devices = JSON.parse(event.data);
+    };
+    webSocket.onerror = (event) => {
+      this._demoMode = true;
+      demoDataPixels((devices) => {
+        // take a copy to force lit to update. TODO: is there a better way?
+        this._devices = { ...devices };
+      });
+    };
+  }
+
   static styles = css`
     .footer {
       flex: 0;
@@ -34,12 +61,13 @@ export class AppRoot extends LitElement {
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
         rel="stylesheet"
       ></link>
-      <h1>BYOP</h1>
-      <three-render
-        perpPoints=${JSON.stringify(this._perpPoints)}
-        backPlatePerimeter=${JSON.stringify(this._backPlatePerimeter)}
-      ></three-render>
-              
+      <h1>BYOP${this._demoMode ? " - demo" : ""}</h1>
+      ${
+        this._devices == null
+          ? html`<p>Loading...</p>`
+          : html`<three-render .devices=${this._devices}></three-render>`
+      }
+
       <div class="footer">
         <div class="about">
           &copy;Andrew Shirley<a
