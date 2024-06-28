@@ -46,6 +46,12 @@ export class ThreeRender extends LitElement {
   }
 
   firstUpdated() {
+    //TODO: make this data driven
+    const fieldMinX = 0;
+    const fieldMaxX = 550000;
+    const fieldMinY = 0;
+    const fieldMaxY = 250000;
+
     const scene = new THREE.Scene();
     const group = new THREE.Group();
     scene.add(group);
@@ -58,13 +64,23 @@ export class ThreeRender extends LitElement {
     this.createAndAddDevices(this.devices, scene);
 
     //ground plane
-    const planeGeometry = new THREE.PlaneGeometry(100000, 100000);
+    const planeGeometry = new THREE.PlaneGeometry(
+      fieldMaxX - fieldMinX,
+      fieldMaxY - fieldMinY
+    );
     const PlaneMaterial = new THREE.MeshBasicMaterial({
       color: 0x008800,
       side: THREE.DoubleSide,
+      // depthFunc: THREE.LessDepth,
+      depthTest: false,
     });
+
+    //TODO: there are rendering issues with the plane in place. I wonder if they will be removed if we change the scale by 10, 100 or 1000?
     const plane = new THREE.Mesh(planeGeometry, PlaneMaterial);
-    plane.translateZ(-20);
+    plane.translateX((fieldMaxX - fieldMinX) / 2);
+    plane.translateY((fieldMaxY - fieldMinY) / 2);
+    plane.translateZ(-500);
+    plane.renderOrder = -999;
     scene.add(plane);
 
     // const axesHelper = new THREE.AxesHelper(500);
@@ -77,7 +93,7 @@ export class ThreeRender extends LitElement {
       75,
       1, //start with 1 aspect-ratio as this will be resized dynamically in the animation loop
       0.1,
-      100000
+      1000000
     );
 
     //TODO: zoom out by default
@@ -85,28 +101,22 @@ export class ThreeRender extends LitElement {
     camera.up.set(0, 0, 1);
     // camera.position.x = fieldMaxX / 2;
     // camera.position.y = fieldMaxY / 2;
-    camera.position.z = 5000;
+    camera.position.z = 125000;
     // camera.translateX(-750);
     // camera.translateY(-150);
     // console.log(bbMin.x - bbc.x, bbMin.y - bbc.y);
     // camera.translateY(bbMin.y - bbc.y);
     // camera.translateX(bbMin.x - bbc.x);
 
-    //TODO: make this dynamic
-    const fieldMinX = 0;
-    const fieldMaxX = 22000;
-    const fieldMinY = 0;
-    const fieldMaxY = 10000;
-
     const controls = new OrbitControls(camera, renderer.domElement);
-    // controls.target = new THREE.Vector3(fieldMaxX / 2, fieldMaxY / 2, 0);
-    controls.target = new THREE.Vector3(fieldMaxX / 4, fieldMaxY / 4, 0);
-    // controls.autoRotate = true;
-    camera.lookAt(fieldMaxX / 2, fieldMaxY / 2, 0);
+    controls.target = new THREE.Vector3(
+      (fieldMaxX - fieldMinX) / 4 + fieldMinX,
+      (fieldMaxY - fieldMinY) / 4 + fieldMinY,
+      0
+    );
 
-    function animate(timestamp) {
+    function animate() {
       resizeCanvasToDisplaySize(renderer, camera);
-      //this.pixels.updateAll(timestamp);
       this.updateColors();
 
       requestAnimationFrame(animate);
@@ -126,7 +136,6 @@ export class ThreeRender extends LitElement {
     for (const [deviceId, device] of Object.entries(this.devices)) {
       for (const [pixelId, p] of Object.entries(device.pixels)) {
         if ("r" in p) {
-          console.log("updating", deviceId, pixelId, p.r, p.g, p.b);
           this.pixelShapes[deviceId][pixelId].material.color.setRGB(
             p.r,
             p.g,
@@ -143,7 +152,7 @@ export class ThreeRender extends LitElement {
     }
   }
 
-  createPixel(d = 15, x = 0, y = 0, z = 0) {
+  createPixel(d = 375, x = 0, y = 0, z = 0) {
     const geometry = new THREE.SphereGeometry(d, 32, 16);
     const material = new THREE.MeshBasicMaterial({ color: 0xffffff });
     const sphere = new THREE.Mesh(geometry, material);
@@ -162,20 +171,21 @@ export class ThreeRender extends LitElement {
     group.translateY(y);
     scene.add(group);
 
+    const defaultPixelSize = Object.entries(pixels).length > 1 ? 175 : 375;
     for (const [pixelId, pixel] of Object.entries(pixels)) {
       const shape = this.createPixel(
-        pixel.d || 15,
+        pixel.d || defaultPixelSize,
         pixel.x,
         pixel.y,
-        pixel.z || 10
+        pixel.z || 250
       );
       this.pixelShapes[id][pixelId] = shape;
       group.add(shape);
     }
 
     //TODO: translate so device coordinates are center of device?
-    // group.translateX(-60);
-    // group.translateY(-60);
+    // group.translateX(-1500);
+    // group.translateY(-1500);
   }
 
   createAndAddDevices(devices, scene) {

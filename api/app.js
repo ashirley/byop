@@ -9,8 +9,10 @@ import enrollmentRouter from "./routes/enrollment.js";
 import visualiserRouterFn from "./routes/visualiser.js";
 
 import { DeviceStore } from "./devices/DeviceStore.js";
+import { loadDemoData } from "./demoData.js";
 
 const devices = new DeviceStore();
+loadDemoData(devices);
 
 const expressWs = expressWsFn(express());
 const app = expressWs.app;

@@ -1,8 +1,6 @@
 import { Device } from "./Device.js";
 import e131 from "e131";
 
-const { abs, min, max, round } = Math;
-
 export class DeviceStore {
   constructor() {
     this.devices = [];
@@ -15,9 +13,6 @@ export class DeviceStore {
     this.e131Cache = {};
     this.visualiserData = {};
     this.visualiserDataBuffer = {}; //store the data while it is being updated.
-
-    this.addDevice(1, 0, 0, "192.168.1.97");
-    this.addDevice(2, 5500, 2500, "192.168.1.98", [[0, 0], { x: 25, y: 25 }]); //example of 2 ways of specifying pixel position
   }
 
   existingDevices() {
@@ -57,10 +52,16 @@ export class DeviceStore {
         // Create normalised (i.e. 0-1) device/global location (g) and pixel/local location (l)
         const gX = (device.location.x - this.minX) / (this.maxX - this.minX);
         const gY = (device.location.y - this.minY) / (this.maxY - this.minY);
-        const lX = (pixel.x - device.minX) / (device.maxX - device.minX);
-        const lY = (pixel.y - device.minY) / (device.maxY - device.minY);
+        const lX =
+          device.maxX === device.minX
+            ? 0
+            : (pixel.x - device.minX) / (device.maxX - device.minX);
+        const lY =
+          device.maxY === device.minY
+            ? 0
+            : (pixel.y - device.minY) / (device.maxY - device.minY);
 
-        const localWeight = 0.1;
+        const localWeight = 0.5;
 
         const t = (Date.now() % 5000) / 5000;
 

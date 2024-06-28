@@ -1,10 +1,10 @@
 export const pixels = (updated) => {
   const devices = {
     0: createAndAddTent(0, 0),
-    1: createAndAddTent(300, 100),
+    1: createAndAddTent(7500, 2500),
     2: createAndAddTent(0, 200),
-    3: createAndAddTent(500, 0),
-    4: createAndAddTent(200, 600),
+    3: createAndAddTent(12500, 0),
+    4: createAndAddTent(5000, 15000),
   };
 
   for (let i = 0; i < 500; i++) {
@@ -44,9 +44,9 @@ const totalY = 1000; //bbox.max.y;
 
 //TODO: make this dynamic
 const fieldMinX = 0;
-const fieldMaxX = 22000;
+const fieldMaxX = 550000;
 const fieldMinY = 0;
-const fieldMaxY = 10000;
+const fieldMaxY = 250000;
 var logged = 0;
 
 function spatialRainbow(d, p, timestamp) {
@@ -54,11 +54,11 @@ function spatialRainbow(d, p, timestamp) {
 
   //TODO: make this dynamic
   const tentMinX = 0;
-  const tentMaxX = 120;
+  const tentMaxX = 3000;
   const tentMinY = 0;
-  const tentMaxY = 120;
+  const tentMaxY = 3000;
 
-  const tentWeight = 1;
+  const tentWeight = 0.5;
 
   const tentX = (p.x - tentMinX) / (tentMaxX - tentMinX);
   const tentY = (p.y - tentMinY) / (tentMaxY - tentMinY);
@@ -91,47 +91,47 @@ function spatialRainbow(d, p, timestamp) {
       );
 }
 
-function createPixel(d = 15, x = 0, y = 0, z = 0) {
+function createPixel(d = 375, x = 0, y = 0, z = 0) {
   return { d, x, y, z, h: 0.5, s: 0.5, l: 0.5 };
 }
 
 function createAndAddTent(x, y) {
   //pixel size
-  const s = 7;
+  const s = 175;
 
   const pixels = {
     0: createPixel(s, 0, 0, 0),
-    1: createPixel(s, 10, 10, 17),
-    2: createPixel(s, 20, 20, 30),
-    3: createPixel(s, 30, 30, 43),
-    4: createPixel(s, 40, 40, 50),
-    5: createPixel(s, 50, 50, 57),
-    6: createPixel(s, 60, 60, 60),
-    7: createPixel(s, 70, 70, 57),
-    8: createPixel(s, 80, 80, 50),
-    9: createPixel(s, 90, 90, 43),
-    10: createPixel(s, 100, 100, 30),
-    11: createPixel(s, 110, 110, 17),
-    12: createPixel(s, 120, 120, 0),
+    1: createPixel(s, 250, 250, 425),
+    2: createPixel(s, 500, 500, 750),
+    3: createPixel(s, 750, 750, 1075),
+    4: createPixel(s, 1000, 1000, 1250),
+    5: createPixel(s, 1250, 1250, 1425),
+    6: createPixel(s, 1500, 1500, 1500),
+    7: createPixel(s, 1750, 1750, 1425),
+    8: createPixel(s, 2000, 2000, 1250),
+    9: createPixel(s, 2250, 2250, 1075),
+    10: createPixel(s, 2500, 2500, 750),
+    11: createPixel(s, 2750, 2750, 425),
+    12: createPixel(s, 3000, 3000, 0),
 
-    13: createPixel(s, 120, 0, 0),
-    14: createPixel(s, 110, 10, 17),
-    15: createPixel(s, 100, 20, 30),
-    16: createPixel(s, 90, 30, 43),
-    17: createPixel(s, 80, 40, 50),
-    18: createPixel(s, 70, 50, 57),
-    19: createPixel(s, 50, 70, 57),
-    20: createPixel(s, 40, 80, 50),
-    21: createPixel(s, 30, 90, 43),
-    22: createPixel(s, 20, 100, 30),
-    23: createPixel(s, 10, 110, 17),
-    24: createPixel(s, 0, 120, 0),
+    13: createPixel(s, 3000, 0, 0),
+    14: createPixel(s, 2750, 250, 425),
+    15: createPixel(s, 2500, 500, 750),
+    16: createPixel(s, 2250, 750, 1075),
+    17: createPixel(s, 2000, 1000, 1250),
+    18: createPixel(s, 1750, 1250, 1425),
+    19: createPixel(s, 1250, 1750, 1425),
+    20: createPixel(s, 1000, 2000, 1250),
+    21: createPixel(s, 750, 2250, 1075),
+    22: createPixel(s, 500, 2500, 750),
+    23: createPixel(s, 250, 2750, 425),
+    24: createPixel(s, 0, 3000, 0),
   };
 
   return { pixels, x, y };
 }
 
 function createAndAddSingle(x, y) {
-  const pixels = { 0: createPixel(0, 15, 60, 60, 0) };
+  const pixels = { 0: createPixel(0, 375, 1500, 1500, 0) };
   return { pixels, x, y };
 }

@@ -19,7 +19,6 @@ export class AppRoot extends LitElement {
     const webSocket = new WebSocket(url);
 
     webSocket.onmessage = (event) => {
-      console.log("updated from ws", event.data);
       this._devices = JSON.parse(event.data);
     };
     webSocket.onerror = (event) => {
