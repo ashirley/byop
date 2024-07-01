@@ -1,0 +1,86 @@
+import e131 from "e131";
+
+const byopAddr = "127.0.0.1";
+const dmxRows = 13;
+const dmxColumns = 13;
+
+const client = new e131.Client(byopAddr);
+const packet = client.createPacket(3 * dmxRows * dmxColumns);
+packet.setSourceName("BYOP");
+packet.setUniverse(0x01);
+const slotsData = packet.getSlotsData();
+
+const targetFps = 30;
+
+setInterval(() => {
+  for (let row = 0; row < dmxRows; row++) {
+    //TODO: is the direction correct here? IS there evan a "correct"
+    const gY = row / (dmxRows - 1);
+    const lY = 0;
+
+    for (let column = 0; column < dmxColumns; column++) {
+      const gX = column / (dmxColumns - 1);
+      const lX = 0;
+
+      const localWeight = 0.5;
+
+      const t = (Date.now() % 5000) / 5000;
+
+      const phase =
+        (t +
+          (gX + 2 * gY + 2 * localWeight * lX + localWeight * lY) /
+            (3 + 3 * localWeight)) %
+        1;
+      // const h = 0.5 + 0.5 * Math.sin(2 * Math.PI * phase);
+      const h = phase;
+      const s = 0.5;
+      const l = 0.3;
+
+      const [r, g, b] = hslToRgb(h, s, l);
+
+      const pixelIndex = row * dmxRows + column;
+      slotsData[pixelIndex * 3] = 255 * r;
+      slotsData[pixelIndex * 3 + 1] = 255 * g;
+      slotsData[pixelIndex * 3 + 2] = 255 * b;
+    }
+  }
+  client.send(packet);
+}, 1000 / targetFps);
+
+//https://stackoverflow.com/a/9493060/6950
+/**
+ * Converts an HSL color value to RGB. Conversion formula
+ * adapted from https://en.wikipedia.org/wiki/HSL_color_space.
+ * Assumes h, s, and l are contained in the set [0, 1] and
+ * returns r, g, and b in the set [0, 1].
+ *
+ * @param   {number}  h       The hue
+ * @param   {number}  s       The saturation
+ * @param   {number}  l       The lightness
+ * @return  {Array}           The RGB representation
+ */
+function hslToRgb(h, s, l) {
+  let r, g, b;
+
+  if (s === 0) {
+    r = g = b = l; // achromatic
+  } else {
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hueToRgb(p, q, h + 1 / 3);
+    g = hueToRgb(p, q, h);
+    b = hueToRgb(p, q, h - 1 / 3);
+  }
+
+  // return [round(r * 255), round(g * 255), round(b * 255)];
+  return [r, g, b];
+}
+
+function hueToRgb(p, q, t) {
+  if (t < 0) t += 1;
+  if (t > 1) t -= 1;
+  if (t < 1 / 6) return p + (q - p) * 6 * t;
+  if (t < 1 / 2) return q;
+  if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+  return p;
+}

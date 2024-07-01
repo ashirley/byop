@@ -1,0 +1,17 @@
+{
+  "name": "dmxdemonstrator",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "description": "simple app to demonstrate sendinge dmx to byop",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "author": "Andrew Shirley <andrew@als-bi.com>",
+  "license": "ISC",
+  "dependencies": {
+    "e131": "^1.1.3"
+  }
+}

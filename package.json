@@ -3,7 +3,8 @@
   "private": true,
   "workspaces": [
     "visualiser",
-    "api"
+    "api",
+    "dmxDemonstrator"
   ],
   "scripts": {
     "start": "concurrently -k npm:start:*",

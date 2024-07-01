@@ -18,6 +18,7 @@ export class AppRoot extends LitElement {
     const url = "http://localhost:3000/visualiser/api/pixelDataFeed";
     const webSocket = new WebSocket(url);
 
+    //TODO: reconnect and show status icon?
     webSocket.onmessage = (event) => {
       this._devices = JSON.parse(event.data);
     };

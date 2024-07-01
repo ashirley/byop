@@ -5,6 +5,9 @@ export class DeviceStore {
   constructor() {
     this.devices = [];
 
+    //TODO: support fixing these so that:
+    //1. users can't stretch the field by adding a pixel with a massive offset.
+    //2. incomplete / sparse devices are still layed out correctly in a known space
     this.minX = 0;
     this.maxX = 0;
     this.minY = 0;
@@ -13,6 +16,38 @@ export class DeviceStore {
     this.e131Cache = {};
     this.visualiserData = {};
     this.visualiserDataBuffer = {}; //store the data while it is being updated.
+
+    //setup an sACN server to receive data
+
+    //TODO: make this configurable and support only using a slice of the data we receive on the universe.
+    const dmxRows = 13;
+    const dmxColumns = 13;
+
+    var server = new e131.Server();
+    const self = this;
+    server.on("listening", function () {
+      console.log(
+        "sACN server listening on port %d, universes %j",
+        this.port,
+        this.universes
+      );
+    });
+    server.on("packet", function (packet) {
+      //check we got as much as we were expecting.
+      if (packet.getSlotsData().length !== dmxRows * dmxColumns * 3) {
+        console.error(
+          `recieved wrong amount of dmx data. Got ${
+            packet.getSlotsData().length
+          } but was expecting ${
+            dmxRows * dmxColumns * 3
+          } (${dmxRows} x ${dmxColumns} x 3)`
+        );
+      }
+      self.dmxData = toRGB2dArray(
+        [...packet.getSlotsData()].map((d) => d / 255),
+        dmxRows
+      );
+    });
   }
 
   existingDevices() {
@@ -49,9 +84,16 @@ export class DeviceStore {
   update() {
     for (const [_, device] of Object.entries(this.devices)) {
       for (const [pixelIndex, pixel] of Object.entries(device.getPixels())) {
+        var r, g, b;
         // Create normalised (i.e. 0-1) device/global location (g) and pixel/local location (l)
-        const gX = (device.location.x - this.minX) / (this.maxX - this.minX);
-        const gY = (device.location.y - this.minY) / (this.maxY - this.minY);
+        const gX =
+          this.maxX === this.minX
+            ? 0
+            : (device.location.x - this.minX) / (this.maxX - this.minX);
+        const gY =
+          this.maxY === this.minY
+            ? 0
+            : (device.location.y - this.minY) / (this.maxY - this.minY);
         const lX =
           device.maxX === device.minX
             ? 0
@@ -61,60 +103,126 @@ export class DeviceStore {
             ? 0
             : (pixel.y - device.minY) / (device.maxY - device.minY);
 
-        const localWeight = 0.5;
-
         const t = (Date.now() % 5000) / 5000;
 
-        // const h =
-        //   0.5 +
-        //   0.5 *
-        //     Math.sin(
-        //       2 *
-        //         Math.PI *
-        //         (t + (gX + 2 * gY + 2 * localWeight * lX + localWeight * lY) /
-        //           (3 + 3 * localWeight))
-        //     );
-        const phase =
-          (t +
-            (gX + 2 * gY + 2 * localWeight * lX + localWeight * lY) /
-              (3 + 3 * localWeight)) %
-          1;
-        // const h = 0.5 + 0.5 * Math.sin(2 * Math.PI * phase);
-        const h = phase;
-        const s = 1;
-        const l = 0.3;
+        if (this.dmxData == null) {
+          const localWeight = 0.5;
 
-        const [r, g, b] = hslToRgb(h, s, l);
+          const phase =
+            (t +
+              (gX + 2 * gY + 2 * localWeight * lX + localWeight * lY) /
+                (3 + 3 * localWeight)) %
+            1;
+          // const h = 0.5 + 0.5 * Math.sin(2 * Math.PI * phase);
+          const h = phase;
+          const s = 1;
+          const l = 0.3;
 
-        // if (device.id == 2 && (t * 1000) % 5 == 1) {
-        // console.log(
-        //   device.id,
-        //   pixelIndex,
-        //   phase,
-        //   t,
-        //   gX,
-        //   gY,
-        //   lX,
-        //   lY,
-        //   localWeight,
-        //   h,
-        //   s,
-        //   l,
-        //   r,
-        //   g,
-        //   b
-        // );
-        // }
+          [r, g, b] = hslToRgb(h, s, l);
+
+          // if (device.id == 2 && (t * 1000) % 5 == 1) {
+          //   console.log(
+          //     "localData",
+          //     device.id,
+          //     pixelIndex,
+          //     phase,
+          //     t,
+          //     gX,
+          //     gY,
+          //     lX,
+          //     lY,
+          //     localWeight,
+          //     h,
+          //     s,
+          //     l,
+          //     r,
+          //     g,
+          //     b
+          //   );
+          // }
+        } else {
+          const localWeight = 0.2;
+
+          // find pixel's effective normalised world coordinates.
+          // Note that the local position is exagerated to show local interest instead of accurate mapping
+          const nX = (gX + localWeight * lX) % 1;
+          const nY = (gY + localWeight * lY) % 1;
+
+          const inputWidth = this.dmxData.length - 1;
+          const inputHeight = this.dmxData[0].length - 1;
+          const inputNW =
+            this.dmxData[Math.floor(nX * inputWidth)][
+              Math.ceil(nY * inputHeight)
+            ];
+          const inputNE =
+            this.dmxData[Math.ceil(nX * inputWidth)][
+              Math.ceil(nY * inputHeight)
+            ];
+          const inputSE =
+            this.dmxData[Math.ceil(nX * inputWidth)][
+              Math.floor(nY * inputHeight)
+            ];
+          const inputSW =
+            this.dmxData[Math.floor(nX * inputWidth)][
+              Math.floor(nY * inputHeight)
+            ];
+
+          r = interpolate(
+            inputNW[0],
+            inputNE[0],
+            inputSE[0],
+            inputSW[0],
+            (nX * inputWidth) % 1,
+            (nY * inputHeight) % 1
+          );
+          g = interpolate(
+            inputNW[1],
+            inputNE[1],
+            inputSE[1],
+            inputSW[1],
+            (nX * inputWidth) % 1,
+            (nY * inputHeight) % 1
+          );
+          b = interpolate(
+            inputNW[2],
+            inputNE[2],
+            inputSE[2],
+            inputSW[2],
+            (nX * inputWidth) % 1,
+            (nY * inputHeight) % 1
+          );
+
+          // if (device.id == 2 && (t * 1000) % 5 == 1) {
+          //   console.log(
+          //     "dmx",
+          //     device.id,
+          //     pixelIndex,
+          //     gX,
+          //     gY,
+          //     lX,
+          //     lY,
+          //     nX,
+          //     nY,
+          //     inputNW,
+          //     inputNE,
+          //     inputSE,
+          //     inputSW,
+          //     localWeight,
+          //     r,
+          //     g,
+          //     b
+          //   );
+          // }
+        }
 
         //publish to visualiser / sACN
         if (device.id in this.e131Cache) {
-          const [client, packet] = this.e131Cache[device.id];
+          const [_, packet] = this.e131Cache[device.id];
           const slotsData = packet.getSlotsData();
 
-          //TODO: support non-RGB color ordering
-          slotsData[pixelIndex * 3] = r;
-          slotsData[pixelIndex * 3 + 1] = g;
-          slotsData[pixelIndex * 3 + 2] = b;
+          slotsData[pixelIndex * 3] = r * 255;
+          slotsData[pixelIndex * 3 + 1] = g * 255;
+          slotsData[pixelIndex * 3 + 2] = b * 255;
         }
         if (!(device.id in this.visualiserDataBuffer)) {
           this.visualiserDataBuffer[device.id] = {
@@ -182,3 +290,27 @@ function hueToRgb(p, q, t) {
   if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
   return p;
 }
+
+function interpolate(nw, ne, se, sw, nX, nY) {
+  //TODO: is this the best interpolation?
+  const w = nw * nY + sw * (1 - nY);
+  const e = ne * nY + se * (1 - nY);
+  return e * nX + w * (1 - nX);
+}
+
+const toRGB2dArray = (arr, width) =>
+  arr.reduce((rows, key, index) => {
+    if (index % (width * 3) == 0) {
+      //new row array
+      rows.push([[key]]);
+    } else if (index % 3 == 0) {
+      //new column array
+      rows[rows.length - 1].push([key]);
+    } else {
+      //add value to column
+      const row = rows[rows.length - 1];
+      const column = row[row.length - 1];
+      column.push(key);
+    }
+    return rows;
+  }, []);
