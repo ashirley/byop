@@ -8,6 +8,7 @@ export class AppRoot extends LitElement {
   static properties = {
     _devices: { state: true },
     _demoMode: { state: true },
+    _source: { state: true },
   };
 
   constructor() {
@@ -20,23 +21,40 @@ export class AppRoot extends LitElement {
 
     //TODO: reconnect and show status icon?
     webSocket.onmessage = (event) => {
-      this._devices = JSON.parse(event.data);
+      const data = JSON.parse(event.data);
+      this._devices = data.devices;
+      this._source = data.source;
     };
     webSocket.onerror = (event) => {
       this._demoMode = true;
       demoDataPixels((devices) => {
         // take a copy to force lit to update. TODO: is there a better way?
         this._devices = { ...devices };
+        this._source = "demo-ui";
       });
     };
   }
 
   static styles = css`
+    :host {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    three-render {
+      flex: 1;
+    }
+
     .footer {
       flex: 0;
       display: flex;
       flex-direction: row;
       padding: 0.25em;
+    }
+
+    .spacer {
+      flex: 1;
     }
 
     .about {
@@ -61,7 +79,11 @@ export class AppRoot extends LitElement {
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
         rel="stylesheet"
       ></link>
-      <h1>BYOP${this._demoMode ? " - demo" : ""}</h1>
+      <h1>BYOP${
+        this._source == null || this._source === "dmx"
+          ? ""
+          : " - " + this._source
+      }</h1>
       ${
         this._devices == null
           ? html`<p>Loading...</p>`
@@ -69,6 +91,7 @@ export class AppRoot extends LitElement {
       }
 
       <div class="footer">
+        <div class="spacer"></div>
         <div class="about">
           &copy;Andrew Shirley<a
             href="https://github.com/ashirley/byop"

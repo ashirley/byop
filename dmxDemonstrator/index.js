@@ -8,7 +8,7 @@ const dmxColumns = 13;
 
 const client = new e131.Client(byopAddr);
 const packet = client.createPacket(3 * dmxRows * dmxColumns);
-packet.setSourceName("BYOP");
+packet.setSourceName("BYOP-demo-dmx");
 packet.setUniverse(0x01);
 const slotsData = packet.getSlotsData();
 

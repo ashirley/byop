@@ -16,8 +16,8 @@ export class DeviceStore {
     this.maxY = 0;
 
     this.e131Cache = {};
-    this.visualiserData = {};
-    this.visualiserDataBuffer = {}; //store the data while it is being updated.
+    this.visualiserData = { devices: {} };
+    this.visualiserDataBuffer = { devices: {} }; //store the data while it is being updated.
 
     //setup an sACN server to receive data
 
@@ -49,6 +49,9 @@ export class DeviceStore {
         [...packet.getSlotsData()].map((d) => d / 255),
         dmxRows
       );
+
+      //NB. sourecname is padded with null characters which make comparing with something else awkward so trim them (took a long time to spot that!)
+      self.dmxData.source = packet.getSourceName().replace(/\0*$/, "");
     });
   }
 
@@ -119,6 +122,17 @@ export class DeviceStore {
 
   update() {
     const timestamp = performance.now();
+
+    if (this.dmxData == null) {
+      this.visualiserDataBuffer.source = "demo-api";
+      console.log(null, this.visualiserDataBuffer.source);
+    } else {
+      if (this.dmxData.source.trim() === "BYOP-demo-dmx") {
+        this.visualiserDataBuffer.source = "demo-dmx";
+      } else {
+        this.visualiserDataBuffer.source = "dmx";
+      }
+    }
 
     for (const [deviceId, device] of Object.entries(this.devices)) {
       for (const [pixelIndex, pixel] of Object.entries(device.pixels)) {
@@ -237,14 +251,14 @@ export class DeviceStore {
           slotsData[pixelIndex * 3 + 1] = g * 255;
           slotsData[pixelIndex * 3 + 2] = b * 255;
         }
-        if (!(deviceId in this.visualiserDataBuffer)) {
-          this.visualiserDataBuffer[deviceId] = {
+        if (!(deviceId in this.visualiserDataBuffer.devices)) {
+          this.visualiserDataBuffer.devices[deviceId] = {
             x: device.x,
             y: device.y,
             pixels: {},
           };
         }
-        this.visualiserDataBuffer[deviceId]["pixels"][pixelIndex] = {
+        this.visualiserDataBuffer.devices[deviceId]["pixels"][pixelIndex] = {
           x: pixel.x,
           y: pixel.y,
           r,
