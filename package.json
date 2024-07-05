@@ -1,10 +1,11 @@
 {
-  "name": "byop",
+  "name": "@byop/root",
   "private": true,
   "workspaces": [
     "visualiser",
     "api",
-    "dmxDemonstrator"
+    "dmxDemonstrator",
+    "demoData"
   ],
   "scripts": {
     "start": "concurrently -k npm:start:*",

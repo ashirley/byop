@@ -28,7 +28,7 @@ export class Device {
             retval.push(new PixelLocation(pixel[0], pixel[1]));
           } else if (pixel.length === 3) {
             console.log(
-              "Ignoring the 3rd dimension for pixel ${pixelId} as we only map in 2D"
+              `Ignoring the 3rd dimension for pixel ${pixelId} as we only map in 2D`
             );
             retval.push(new PixelLocation(pixel[0], pixel[1]));
           } else {
@@ -37,7 +37,7 @@ export class Device {
         } else if (typeof pixel === "object" && "x" in pixel && "y" in pixel) {
           if ("z" in pixel) {
             console.log(
-              "Ignoring the 3rd dimension for pixel ${pixelId} as we only map in 2D"
+              `Ignoring the 3rd dimension for pixel ${pixelId} as we only map in 2D`
             );
           }
           retval.push(new PixelLocation(pixel.x, pixel.y));

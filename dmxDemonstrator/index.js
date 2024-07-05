@@ -1,5 +1,7 @@
 import e131 from "e131";
 
+import { spatialRainbow } from "@byop/demoData";
+
 const byopAddr = "127.0.0.1";
 const dmxRows = 13;
 const dmxColumns = 13;
@@ -13,6 +15,8 @@ const slotsData = packet.getSlotsData();
 const targetFps = 30;
 
 setInterval(() => {
+  const timestamp = performance.now();
+
   for (let row = 0; row < dmxRows; row++) {
     //TODO: is the direction correct here? IS there evan a "correct"
     const gY = row / (dmxRows - 1);
@@ -22,26 +26,27 @@ setInterval(() => {
       const gX = column / (dmxColumns - 1);
       const lX = 0;
 
-      const localWeight = 0.5;
-
-      const t = (Date.now() % 5000) / 5000;
-
-      const phase =
-        (t +
-          (gX + 2 * gY + 2 * localWeight * lX + localWeight * lY) /
-            (3 + 3 * localWeight)) %
-        1;
-      // const h = 0.5 + 0.5 * Math.sin(2 * Math.PI * phase);
-      const h = phase;
-      const s = 0.5;
-      const l = 0.3;
-
-      const [r, g, b] = hslToRgb(h, s, l);
+      const c = spatialRainbow(timestamp, { gX, gY, lX, lY });
 
       const pixelIndex = row * dmxRows + column;
-      slotsData[pixelIndex * 3] = 255 * r;
-      slotsData[pixelIndex * 3 + 1] = 255 * g;
-      slotsData[pixelIndex * 3 + 2] = 255 * b;
+      slotsData[pixelIndex * 3] = 255 * c.r;
+      slotsData[pixelIndex * 3 + 1] = 255 * c.g;
+      slotsData[pixelIndex * 3 + 2] = 255 * c.b;
+
+      // console.log(
+      //   row,
+      //   column,
+      //   gX,
+      //   gY,
+      //   lX,
+      //   lY,
+      //   c.r,
+      //   c.g,
+      //   c.b,
+      //   slotsData[pixelIndex * 3],
+      //   slotsData[pixelIndex * 3 + 1],
+      //   slotsData[pixelIndex * 3 + 2]
+      // );
     }
   }
   client.send(packet);

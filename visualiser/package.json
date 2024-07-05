@@ -1,5 +1,5 @@
 {
-  "name": "byop-visualiser",
+  "name": "@byop/visualiser",
   "private": true,
   "version": "1.0.0",
   "description": "Visualiser for Bring Your Own Pixel distributed lighting",
