@@ -2,9 +2,8 @@ import { sampleDevices } from "@byop/demoData";
 
 export const loadDemoData = (devices) => {
   const sampleDevicesObj = sampleDevices();
-  for (const [deviceId, device] of Object.entries(sampleDevicesObj.devices)) {
+  for (const [_, device] of Object.entries(sampleDevicesObj.devices)) {
     devices.addDevice(
-      deviceId,
       device.x,
       device.y,
       null,

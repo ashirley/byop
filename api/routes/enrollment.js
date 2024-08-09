@@ -1,6 +1,15 @@
 import express from "express";
 var router = express.Router();
 
+function page(object, start, num) {
+  return Object.keys(object)
+    .slice(start, start + num)
+    .reduce(function (acc, key) {
+      acc[key] = object[key];
+      return acc;
+    }, {});
+}
+
 /* GET home page. */
 router.get("/", function (req, res, next) {
   res.render("index", { title: "Express" });
@@ -8,15 +17,23 @@ router.get("/", function (req, res, next) {
 
 router.get("/devices", function (req, res, next) {
   res.render("devices", {
-    existingDevices: req.devices.existingDevices(),
+    //TODO: proper paging, not just static top 10
+    existingDevices: page(req.devices.existingDevices(), 0, 10),
   });
 });
 
-router.post("/devices", function (req, res, next) {
-  req.devices.addDevice(req.body.id, req.body.x, req.body.y, req.body.ipAddr);
-  res.render("devices", {
-    existingDevices: req.devices.existingDevices(),
-  });
+router.post("/devices/new", function (req, res, next) {
+  req.devices.addDevice(
+    req.body.x,
+    req.body.y,
+    req.body.ipAddr,
+    JSON.parse(req.body.drawnPixelLocations || req.body.pixelLocations)
+  );
+  res.redirect("/devices");
+});
+
+router.get("/devices/new", function (req, res, next) {
+  res.render("newdevice", {});
 });
 
 // router.get("/devices/:deviceId", function (req, res, next) {

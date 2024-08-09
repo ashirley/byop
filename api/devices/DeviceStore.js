@@ -6,6 +6,7 @@ import e131 from "e131";
 export class DeviceStore {
   constructor() {
     this.devices = {};
+    this.nextId = 0;
 
     //TODO: support fixing these so that:
     //1. users can't stretch the field by adding a pixel with a massive offset.
@@ -60,8 +61,10 @@ export class DeviceStore {
     return this.devices;
   }
 
-  addDevice(id, x, y, ipAddr, pixels) {
-    const device = { x, y, ipAddr, pixels: Device.parsePixels(pixels) };
+  addDevice(x, y, ipAddr, pixels) {
+    const id = this.nextId++;
+
+    const device = { id, x, y, ipAddr, pixels: Device.parsePixels(pixels) };
     this.devices[id] = device;
 
     //update global min/max
@@ -125,7 +128,6 @@ export class DeviceStore {
 
     if (this.dmxData == null) {
       this.visualiserDataBuffer.source = "demo-api";
-      console.log(null, this.visualiserDataBuffer.source);
     } else {
       if (this.dmxData.source.trim() === "BYOP-demo-dmx") {
         this.visualiserDataBuffer.source = "demo-dmx";

@@ -1,0 +1,107 @@
+<script>
+    function setVisibility(type, visible) {
+        const allSectionElements = document.getElementsByClassName("section-" + type);
+        for (let i = 0; i < allSectionElements.length; i++) {
+            allSectionElements[i].toggleAttribute("hidden", !visible)
+        }
+    }
+
+    function onModeSelect(v) {
+        setVisibility("single", v == "single");
+        setVisibility("specified", v == "specified");
+        setVisibility("drawn", v == "drawn");
+    }
+
+</script>
+<div class="newdevicesform">
+    <form method="POST">
+    <label class="newdevicesform__x-label" for="x">X</label><input class="newdevicesform__x-input" id="x" name="x"/>
+    <label class="newdevicesform__y-label" for="y">Y</label><input class="newdevicesform__y-input" id="y" name="y"/>
+    <label class="newdevicesform__ipaddr-label" for="ipAddr">IP Address</label><input class="newdevicesform__ipaddr-input" id="ipAddr" name="ipAddr"/>
+    <p class="newdevicesform__info">The layout of individual pixels is used to give somelocal interest to the pattern.
+        This isn't trying to accurately place individual pixels on the whole field and doesn't therefore have any units
+        (the values entered are normalised before being used)</p>
+    <div class="newdevicesform__mode-select">
+        <div>
+            <input type="radio" id="single" name="mode" value="single" checked onchange="onModeSelect('single')" />
+            <label for="single">Single colour</label>
+        </div>
+        <div>
+            <input type="radio" id="specified" name="mode" value="specified" onchange="onModeSelect('specified')" />
+            <label for="specified">Specified position</label>
+        </div>
+        <div>
+            <input type="radio" id="drawn" name="mode" value="drawn" onchange="onModeSelect('drawn')" />
+            <label for="drawn">Drawn position</label>
+        </div>
+    </div>
+    <div class="newdevicesform__info newdevicesform__info--single section-single">All pixels have the same colour. TODO: how to configure this in wled</div>
+    
+    <div class="newdevicesform__info newdevicesform__info--specified section-specified">Specify the location of the pixels. e.g. <pre>[[0,10],[50,5]]</pre>. TODO: how to configure this in wled</div>
+    <label class="newdevicesform__pixelLocations-label section-specified" for="pixelLocations">pixel locations</label><textarea class="newdevicesform__pixelLocations-input section-specified" id="pixelLocations" name="pixelLocations" rows="5"></textarea>
+    
+    <div class="newdevicesform__info newdevicesform__info--drawn section-drawn">Specify the number of pixels and draw the shape of their layout as seen from above. TODO: how to configure this in wled</div>
+    <label class="newdevicesform__pixelCount-label section-drawn" for="pixelCount">pixel count</label><input class="newdevicesform__pixelCount-input section-drawn" id="pixelCount" name="pixelCount" type="number" value="50"/>
+    <script type="text/paperscript" canvas="pixelLocationsCanvas">
+        var group;
+        var path;
+
+        function onMouseDown(event) {
+            // If we produced a path before, remove it:
+            if (group) {
+                group.remove();
+            }
+
+            // Create a new path and set its stroke color to black:
+            path = new Path({
+                segments: [event.point],
+                strokeColor: 'black'
+            });
+
+            group = new Group([path])
+        }
+
+        // While the user drags the mouse, points are added to the path
+        // at the position of the mouse:
+        function onMouseDrag(event) {
+            path.add(event.point);
+        }
+
+        // When the mouse is released, we simplify the path:
+        function onMouseUp(event) {
+            if (path.length > 0) {
+                path.simplify(50);
+
+                var pointsArr = []
+
+                var segmentCount=50 - 1;
+                for (var i = 0; i <= segmentCount; i++) {
+                    var point = path.getPointAt(path.length * i / segmentCount);
+                    var circle = new Path.Circle({
+                        center: point,
+                        radius: 3,
+                        fillColor: 'red'
+                    });
+                    group.addChild(circle);
+
+                    var decimalPlaces = 1;
+                    pointsArr.push([+point.x.toFixed(decimalPlaces), +point.y.toFixed(decimalPlaces)]);
+                }
+
+                document.getElementById("drawnPixelLocations").value = JSON.stringify(pointsArr)
+                console.log(pointsArr);
+            }
+        }
+
+    </script>
+
+    <canvas id="pixelLocationsCanvas" resize class="section-drawn"></canvas>
+    {{!-- TODO: make this a text area (and the one above) --}}
+    <label class="newdevicesform__drawnPixelLocations-label section-drawn" for="drawnPixelLocations">pixel locations</label><textarea class="newdevicesform__drawnPixelLocations-input section-drawn" id="drawnPixelLocations" name="drawnPixelLocations" readOnly rows="5"></textarea>
+
+    <input type="submit"/>
+    </form>
+</div>
+<script>
+    onModeSelect('single');
+</script>

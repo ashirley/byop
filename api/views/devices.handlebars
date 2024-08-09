@@ -3,15 +3,10 @@
 <div>
   <ul>
     <li>id: {{ id }}</li>
-    <li>location: ({{ location.x }}, {{ location.y }})</li>
+    <li>location: ({{ x }}, {{ y }})</li>
     <li>ipAddr: {{ ipAddr }}</li>
+    <li>pixelCount: {{ pixels.length }}</li>
   </ul>
 </div>
 {{/each}}
-<form method="POST">
-  <input name="id"/>
-  <input name="x"/>
-  <input name="y"/>
-  <input name="ipAddr"/>
-  <input type="submit"/>
-</form>
+<a href="devices/new">Enroll new device...</a>
