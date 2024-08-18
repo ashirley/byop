@@ -21,39 +21,41 @@ export class DeviceStore {
     this.visualiserDataBuffer = { devices: {} }; //store the data while it is being updated.
 
     //setup an sACN server to receive data
+    const listenForDmx = true;
+    if (listenForDmx) {
+      //TODO: make this configurable and support only using a slice of the data we receive on the universe.
+      const dmxRows = 13;
+      const dmxColumns = 13;
 
-    //TODO: make this configurable and support only using a slice of the data we receive on the universe.
-    const dmxRows = 13;
-    const dmxColumns = 13;
-
-    var server = new e131.Server();
-    const self = this;
-    server.on("listening", function () {
-      console.log(
-        "sACN server listening on port %d, universes %j",
-        this.port,
-        this.universes
-      );
-    });
-    server.on("packet", function (packet) {
-      //check we got as much as we were expecting.
-      if (packet.getSlotsData().length !== dmxRows * dmxColumns * 3) {
-        console.error(
-          `recieved wrong amount of dmx data. Got ${
-            packet.getSlotsData().length
-          } but was expecting ${
-            dmxRows * dmxColumns * 3
-          } (${dmxRows} x ${dmxColumns} x 3)`
+      var server = new e131.Server();
+      const self = this;
+      server.on("listening", function () {
+        console.log(
+          "sACN server listening on port %d, universes %j",
+          this.port,
+          this.universes
         );
-      }
-      self.dmxData = toRGB2dArray(
-        [...packet.getSlotsData()].map((d) => d / 255),
-        dmxRows
-      );
+      });
+      server.on("packet", function (packet) {
+        //check we got as much as we were expecting.
+        if (packet.getSlotsData().length !== dmxRows * dmxColumns * 3) {
+          console.error(
+            `recieved wrong amount of dmx data. Got ${
+              packet.getSlotsData().length
+            } but was expecting ${
+              dmxRows * dmxColumns * 3
+            } (${dmxRows} x ${dmxColumns} x 3)`
+          );
+        }
+        self.dmxData = toRGB2dArray(
+          [...packet.getSlotsData()].map((d) => d / 255),
+          dmxRows
+        );
 
-      //NB. sourecname is padded with null characters which make comparing with something else awkward so trim them (took a long time to spot that!)
-      self.dmxData.source = packet.getSourceName().replace(/\0*$/, "");
-    });
+        //NB. sourecname is padded with null characters which make comparing with something else awkward so trim them (took a long time to spot that!)
+        self.dmxData.source = packet.getSourceName().replace(/\0*$/, "");
+      });
+    }
   }
 
   //TODO: update the UI as this API will now be slightly different.
