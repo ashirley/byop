@@ -35,7 +35,12 @@ router.post("/devices/new", function (req, res, next) {
 });
 
 router.get("/devices/new", function (req, res, next) {
-  res.render("newdevice", {});
+  const unregDevices = req.deviceScanner.getUnregisteredDevices();
+  const latestUnregDevices = Object.keys(unregDevices).slice(-10);
+
+  res.render("newdevice", {
+    unregisteredDevices: latestUnregDevices,
+  });
 });
 
 // router.get("/devices/:deviceId", function (req, res, next) {

@@ -9,10 +9,13 @@ import enrollmentRouter from "./routes/enrollment.js";
 import visualiserRouterFn from "./routes/visualiser.js";
 
 import { DeviceStore } from "./devices/DeviceStore.js";
+import { DeviceScanner } from "./devices/DeviceScanner.js";
 import { loadDemoData } from "./demoData.js";
 
 const devices = new DeviceStore();
 loadDemoData(devices);
+
+const deviceScanner = new DeviceScanner();
 
 const expressWs = expressWsFn(express());
 const app = expressWs.app;
@@ -35,6 +38,7 @@ app.use(multer().none());
 // expose devices to the routers
 app.use(function (req, res, next) {
   req.devices = devices;
+  req.deviceScanner = deviceScanner;
   next();
 });
 
@@ -64,5 +68,7 @@ setInterval(() => {
     c.send(JSON.stringify(devices.visualiserData));
   }
 }, 1000 / targetFps);
+
+console.log("Started");
 
 export default app;
