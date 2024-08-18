@@ -27,7 +27,9 @@ router.post("/devices/new", function (req, res, next) {
     req.body.x,
     req.body.y,
     req.body.ipAddr,
-    JSON.parse(req.body.drawnPixelLocations || req.body.pixelLocations)
+    JSON.parse(
+      req.body.drawnPixelLocations || req.body.pixelLocations || "[[0,0]]"
+    )
   );
   res.redirect("/devices");
 });
