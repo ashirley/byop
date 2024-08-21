@@ -25,7 +25,7 @@
         <div class="group">
             <input id="ipAddr" class="cb_edit newdevicesform__ipaddr-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false"
                 aria-controls="newdevicesform__ipaddr-input-controls" name="ipAddr">
-            <button id="cb1-button" tabindex="-1" aria-label="States" aria-expanded="false" aria-controls="cb1-listbox">
+            <button id="cb1-button" tabindex="-1" aria-label="States" aria-expanded="false" aria-controls="cb1-listbox" data-initially-hidden>
                 <svg width="18" height="16" aria-hidden="true" focusable="false" style="forced-color-adjust: auto">
                     <polygon class="arrow" stroke-width="0" fill-opacity="0.75" fill="currentcolor" points="3,6 15,6 9,14">
                     </polygon>
@@ -53,7 +53,7 @@
             <input type="radio" id="specified" name="mode" value="specified" onchange="onModeSelect('specified')" />
             <label for="specified">Specified position</label>
         </div>
-        <div>
+        <div data-initially-hidden>
             <input type="radio" id="drawn" name="mode" value="drawn" onchange="onModeSelect('drawn')" />
             <label for="drawn">Drawn position</label>
         </div>
@@ -118,9 +118,9 @@
 
     </script>
 
-    <canvas id="pixelLocationsCanvas" resize class="section-drawn"></canvas>
+    <canvas id="pixelLocationsCanvas" resize class="section-drawn" data-initially-hidden></canvas>
     {{!-- TODO: make this a text area (and the one above) --}}
-    <label class="newdevicesform__drawnPixelLocations-label section-drawn" for="drawnPixelLocations">pixel locations</label><textarea class="newdevicesform__drawnPixelLocations-input section-drawn" id="drawnPixelLocations" name="drawnPixelLocations" readOnly rows="5"></textarea>
+    <label class="newdevicesform__drawnPixelLocations-label section-drawn" for="drawnPixelLocations" data-initially-hidden>pixel locations</label><textarea class="newdevicesform__drawnPixelLocations-input section-drawn" id="drawnPixelLocations" name="drawnPixelLocations" readOnly rows="5" data-initially-hidden></textarea>
 
     <input type="submit"/>
     </form>

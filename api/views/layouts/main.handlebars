@@ -6,6 +6,12 @@
     <link rel="stylesheet" href="/stylesheets/style.css"/>
     <link rel="stylesheet" href="/stylesheets/combobox.css"/>
     <script src="/javascripts/vendor/paper-full.min.js" defer></script>
+    <script>
+        window.addEventListener("load", (e=> {
+            const refs = [...document.querySelectorAll(`[data-initially-hidden]`)];
+            refs.forEach(e=>e.toggleAttribute("data-initially-hidden", false))
+        }));
+    </script>
 </head>
 <body>
     {{{body}}}

@@ -11,6 +11,10 @@ a {
   visibility: hidden;
 }
 
+[data-initially-hidden] {
+  display: none;
+}
+
 .newdevicesform form {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
