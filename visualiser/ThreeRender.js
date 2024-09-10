@@ -162,17 +162,18 @@ export class ThreeRender extends LitElement {
     return sphere;
   }
 
-  createAndAddDevice(id, x, y, pixels, scene) {
+  createAndAddDevice(id, device, scene) {
     if (!(id in this.pixelShapes)) {
       this.pixelShapes[id] = {};
     }
     const group = new THREE.Group();
-    group.translateX(x);
-    group.translateY(y);
+    group.translateX(device.x);
+    group.translateY(device.y);
     scene.add(group);
 
-    const defaultPixelSize = Object.entries(pixels).length > 1 ? 175 : 375;
-    for (const [pixelId, pixel] of Object.entries(pixels)) {
+    const defaultPixelSize =
+      Object.entries(device.pixels).length > 1 ? 175 : 375;
+    for (const [pixelId, pixel] of Object.entries(device.pixels)) {
       const shape = this.createPixel(
         pixel.d || defaultPixelSize,
         pixel.x,
@@ -183,20 +184,18 @@ export class ThreeRender extends LitElement {
       group.add(shape);
     }
 
-    //TODO: translate so device coordinates are center of device?
-    // group.translateX(-1500);
-    // group.translateY(-1500);
+    //translate so device coordinates are center of device?
+    group.translateX(
+      device.minX === device.maxX ? 0 : (-1 * (device.maxX + device.minX)) / 2
+    );
+    group.translateY(
+      device.minY === device.maxY ? 0 : (-1 * (device.maxY + device.minY)) / 2
+    );
   }
 
   createAndAddDevices(devices, scene) {
     for (const [deviceId, device] of Object.entries(devices)) {
-      this.createAndAddDevice(
-        deviceId,
-        device.x,
-        device.y,
-        device.pixels,
-        scene
-      );
+      this.createAndAddDevice(deviceId, device, scene);
     }
   }
 }
