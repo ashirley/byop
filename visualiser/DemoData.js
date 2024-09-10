@@ -1,10 +1,9 @@
-import { sampleDevices, spatialRainbow } from "@byop/demodata";
+import { sampleDevices, spatialRainbow, targetFps } from "@byop/demodata";
 
 export const pixels = (updated) => {
   const { devices } = sampleDevices();
 
   //update on an interval
-  const targetFps = 30;
   setInterval(() => {
     const timestamp = performance.now();
     // console.log(typeof devices, devices);

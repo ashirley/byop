@@ -1,3 +1,7 @@
+const sampleIndividuals = 5000;
+const sampleTents = 0;
+export const targetFps = 15;
+
 export function sampleDevices() {
   const fieldMinX = 0;
   const fieldMaxX = 550000;
@@ -5,48 +9,63 @@ export function sampleDevices() {
   const fieldMaxY = 250000;
 
   const devices = {
-    0: createTentDevice(0, 0),
+    // 0: createSinglePixelDevice(250000, 100000),
+    0: createTentDevice(250000, 100000),
     1: createTentDevice(7500, 2500),
     2: createTentDevice(0, 200),
     3: createTentDevice(12500, 0),
     4: createTentDevice(5000, 15000),
   };
 
-  for (let i = 0; i < 500; i++) {
+  var devicesLength = 5;
+
+  for (let i = 0; i < sampleTents; i++) {
     const tentX = Math.random() * fieldMaxX;
     const tentY = Math.random() * fieldMaxY;
 
-    devices[i + 5] = createTentDevice(tentX, tentY);
+    devices[devicesLength++] = createTentDevice(tentX, tentY);
   }
 
-  for (let i = 0; i < 1000; i++) {
+  for (let i = 0; i < sampleIndividuals; i++) {
     const pointX = Math.random() * fieldMaxX;
     const pointY = Math.random() * fieldMaxY;
 
-    devices[i + 1005] = createSinglePixelDevice(pointX, pointY);
+    devices[devicesLength++] = createSinglePixelDevice(pointX, pointY);
   }
 
   //populate relative dimensions for all pixels
   for (const [_, device] of Object.entries(devices)) {
     const gX =
       fieldMaxX === fieldMinX
-        ? 0
+        ? 0.5
         : (device.x - fieldMinX) / (fieldMaxX - fieldMinX);
     const gY =
       fieldMaxY === fieldMinY
-        ? 0
+        ? 0.5
         : (device.y - fieldMinY) / (fieldMaxY - fieldMinY);
+    if (gY < 0 || gY > 1) {
+      console.log("Incorrect gY", gY);
+    }
+    if (gX < 0 || gX > 1) {
+      console.log("Incorrect gX", gX);
+    }
     for (const [_, pixel] of Object.entries(device.pixels)) {
       pixel.gX = gX;
       pixel.gY = gY;
       pixel.lX =
         device.maxX === device.minX
-          ? 0
+          ? 0.5
           : (pixel.x - device.minX) / (device.maxX - device.minX);
       pixel.lY =
         device.maxY === device.minY
-          ? 0
+          ? 0.5
           : (pixel.y - device.minY) / (device.maxY - device.minY);
+      if (pixel.lY < 0 || pixel.lY > 1) {
+        console.log("Incorrect lY", pixel.lY);
+      }
+      if (pixel.lX < 0 || pixel.lX > 1) {
+        console.log("Incorrect lX", pixel.lX);
+      }
     }
   }
   return {
@@ -99,7 +118,7 @@ function createTentDevice(x, y) {
 }
 
 function createSinglePixelDevice(x, y) {
-  const pixels = { 0: createPixel(0, 375, 1500, 1500, 0) };
+  const pixels = { 0: createPixel(375, 0, 0, 0) };
   return { pixels, x, y };
 }
 
@@ -109,8 +128,8 @@ function createSinglePixelDevice(x, y) {
  * @param {*} timestamp a timestamp for this update loop. typically `performance.now()`.
  * @param {*} pixel.gX a global x coordinate for the device itself [0,1]
  * @param {*} pixel.gY a global y coordinate for the device itself [0,1]
- * @param {*} pixel.lX a local x coordinate for the pixel relative to the device [-1,1]
- * @param {*} pixel.lY a local y coordinate for the pixel relative to the device [-1,1]
+ * @param {*} pixel.lX a local x coordinate for the pixel relative to the device [0,1]
+ * @param {*} pixel.lY a local y coordinate for the pixel relative to the device [0,1]
  * @returns rgb and hsl for the given pixel
  */
 export function spatialRainbow(timestamp, pixel) {
@@ -122,10 +141,11 @@ export function spatialRainbow(timestamp, pixel) {
     (t +
       (pixel.gX +
         2 * pixel.gY +
-        2 * localWeight * pixel.lX +
-        localWeight * pixel.lY) /
+        2 * localWeight * (pixel.lX - 0.5) +
+        localWeight * (pixel.lY - 0.5)) /
         (3 + 3 * localWeight)) %
     1;
+
   // const h = 0.5 + 0.5 * Math.sin(2 * Math.PI * phase);
   const h = phase;
   const s = 0.5;

@@ -10,9 +10,12 @@ import visualiserRouterFn from "./routes/visualiser.js";
 
 import { DeviceStore } from "./devices/DeviceStore.js";
 import { DeviceScanner } from "./devices/DeviceScanner.js";
-import { loadDemoData } from "./demoData.js";
+import { loadDemoData, targetFps as demoTargetFps } from "./demoData.js";
 
 const devices = new DeviceStore();
+
+// const targetFps = 30;
+const targetFps = demoTargetFps;
 loadDemoData(devices);
 
 const deviceScanner = new DeviceScanner();
@@ -61,7 +64,6 @@ app.use(function (err, req, res, next) {
   res.render("error");
 });
 
-const targetFps = 30;
 setInterval(() => {
   devices.update();
   for (const c of expressWs.getWss().clients) {

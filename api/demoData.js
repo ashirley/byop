@@ -1,4 +1,4 @@
-import { sampleDevices } from "@byop/demoData";
+import { sampleDevices, targetFps as demoTargetFps } from "@byop/demoData";
 
 export const loadDemoData = (devices) => {
   const sampleDevicesObj = sampleDevices();
@@ -17,3 +17,4 @@ export const loadDemoData = (devices) => {
   //   { x: 625, y: 625 },
   // ]); //example of 2 ways of specifying pixel position
 };
+export const targetFps = demoTargetFps;
