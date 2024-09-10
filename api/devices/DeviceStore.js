@@ -70,17 +70,22 @@ export class DeviceStore {
     this.devices[id] = device;
 
     //update global min/max
+    var globalLimitsChanged = false;
     if (x < this.minX) {
       this.minX = x;
+      globalLimitsChanged = true;
     }
     if (x > this.maxX) {
       this.maxX = x;
+      globalLimitsChanged = true;
     }
     if (y < this.minY) {
       this.minY = y;
+      globalLimitsChanged = true;
     }
     if (y > this.maxY) {
       this.maxY = y;
+      globalLimitsChanged = true;
     }
 
     //calculate local min/max
@@ -111,6 +116,24 @@ export class DeviceStore {
         device.maxY === device.minY
           ? 0
           : (pixel.y - device.minY) / (device.maxY - device.minY);
+    }
+
+    if (globalLimitsChanged) {
+      // as the field has got bigger, the previously calculated normalised values need to be recalculated.
+      for (const [_, device] of Object.entries(this.devices)) {
+        const gX =
+          this.maxX === this.minX
+            ? 0
+            : (device.x - this.minX) / (this.maxX - this.minX);
+        const gY =
+          this.maxY === this.minY
+            ? 0
+            : (device.y - this.minY) / (this.maxY - this.minY);
+        for (const [pixelIndex, pixel] of Object.entries(device.pixels)) {
+          pixel.gX = gX;
+          pixel.gY = gY;
+        }
+      }
     }
 
     if (ipAddr) {
@@ -259,6 +282,10 @@ export class DeviceStore {
           this.visualiserDataBuffer.devices[deviceId] = {
             x: device.x,
             y: device.y,
+            minX: device.minX,
+            maxX: device.maxX,
+            minY: device.minY,
+            maxY: device.maxY,
             pixels: {},
           };
         }
