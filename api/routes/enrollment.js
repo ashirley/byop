@@ -40,6 +40,8 @@ router.get("/devices/new", function (req, res, next) {
 
   res.render("newdevice", {
     unregisteredDevices: latestUnregDevices,
+    wifiSsid: process.env.WIFI_SSID,
+    wifiPassword: process.env.WIFI_PASSWORD,
   });
 });
 

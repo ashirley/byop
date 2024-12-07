@@ -12,20 +12,36 @@
         setVisibility("drawn", v == "drawn");
     }
 
+    function onDeviceModeSelect(v) {
+        setVisibility("serial", v == "serial");
+        setVisibility("list", v == "list");
+    }
+
 </script>
 <script src="/javascripts/combobox.js" defer></script>
+<script type="module">
+    import { startEnrollment } from "/javascripts/improvSerialProvision.js";
+    window.startEnrollment = () => startEnrollment({wifiSsid: "{{wifiSsid}}", wifiPassword: "{{wifiPassword}}"});
+</script>
 <div class="newdevicesform">
     <form method="POST">
-    <label class="newdevicesform__x-label" for="x">X</label><input class="newdevicesform__x-input" id="x" name="x"/>
-    <label class="newdevicesform__y-label" for="y">Y</label><input class="newdevicesform__y-input" id="y" name="y"/>
+    {{!-- device identification --}}
+
+    <div data-initially-hidden class="newdevicesform__devicemode-select">
+        <input type="radio" id="list" name="devicemode" value="list" checked onchange="onDeviceModeSelect('list')" />
+        <label for="list">Select from list of discovered devices</label>
+
+        <input type="radio" id="serial" name="devicemode" value="serial" onchange="onDeviceModeSelect('serial')" />
+        <label for="serial">Provision via Serial (USB)</label>
+    </div>
     
-    <label class="newdevicesform__ipaddr-label" for="ipAddr">IP Address</label>
+    <label class="newdevicesform__ipaddr-label section-list" for="ipAddr">IP Address</label>
     {{!-- Taken from https://www.w3.org/WAI/ARIA/apg/patterns/combobox/examples/combobox-autocomplete-list/ --}}
-    <div class="combobox combobox-list">
+    <div class="combobox combobox-list section-list">
         <div class="group">
             <input id="ipAddr" class="cb_edit newdevicesform__ipaddr-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false"
                 aria-controls="newdevicesform__ipaddr-input-controls" name="ipAddr">
-            <button id="cb1-button" tabindex="-1" aria-label="States" aria-expanded="false" aria-controls="cb1-listbox" data-initially-hidden>
+            <button type="button" id="cb1-button" tabindex="-1" aria-label="States" aria-expanded="false" aria-controls="cb1-listbox" data-initially-hidden>
                 <svg width="18" height="16" aria-hidden="true" focusable="false" style="forced-color-adjust: auto">
                     <polygon class="arrow" stroke-width="0" fill-opacity="0.75" fill="currentcolor" points="3,6 15,6 9,14">
                     </polygon>
@@ -41,7 +57,16 @@
         </ul>
     </div>
 
-    <p class="newdevicesform__info">The layout of individual pixels is used to give somelocal interest to the pattern.
+    <button type="button" class="newdevicesform__provision-button section-serial" onClick="window.startEnrollment(); return false;">Provision</button>
+    <div class="newdevicesform__provision-message newdevicesform__provision-message--hidden"></div>
+
+    {{!-- Location --}}
+    <p class="newdevicesform__info">Device Location</p>
+    <label class="newdevicesform__x-label" for="x">X</label><input class="newdevicesform__x-input" id="x" name="x"/>
+    <label class="newdevicesform__y-label" for="y">Y</label><input class="newdevicesform__y-input" id="y" name="y"/>
+
+    {{!-- pixel layout --}}
+    <p class="newdevicesform__info">The layout of individual pixels is used to give some local interest to the pattern.
         This isn't trying to accurately place individual pixels on the whole field and doesn't therefore have any units
         (the values entered are normalised before being used)</p>
     <div class="newdevicesform__mode-select">
@@ -66,6 +91,8 @@
     <div class="newdevicesform__info newdevicesform__info--drawn section-drawn">Specify the number of pixels and draw the shape of their layout as seen from above. TODO: how to configure this in wled</div>
     <label class="newdevicesform__pixelCount-label section-drawn" for="pixelCount">pixel count</label><input class="newdevicesform__pixelCount-input section-drawn" id="pixelCount" name="pixelCount" type="number" value="50"/>
     <script type="text/paperscript" canvas="pixelLocationsCanvas">
+        //TODO: add a grid to align drawing
+        //TOOD: add an edit/reset interface instead of expecting it to be perfect first time!
         var group;
         var path;
 
@@ -127,4 +154,5 @@
 </div>
 <script>
     onModeSelect('single');
+    onDeviceModeSelect('list');
 </script>

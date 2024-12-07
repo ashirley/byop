@@ -41,16 +41,26 @@ a {
   margin-bottom: .5em;
 }
 
-.newdevicesform__mode-label {
+.newdevicesform__mode-label,
+.newdevicesform__devicemode-label {
   grid-column: 1;
   margin-bottom: .5em;
 }
 
-.newdevicesform__mode-select {
+.newdevicesform__mode-select,
+.newdevicesform__devicemode-select {
   grid-column: 1 / span 3;
   margin-bottom: .5em;
   display: flex;
   justify-content: center;
+}
+
+.newdevicesform__provision-message {
+  grid-column: 1 / span 3;
+}
+
+.newdevicesform__provision-message--hidden {
+  display: none;
 }
 
 .newdevicesform__info {
