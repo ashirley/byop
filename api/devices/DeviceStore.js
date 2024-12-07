@@ -8,13 +8,16 @@ export class DeviceStore {
     this.devices = {};
     this.nextId = 0;
 
-    //TODO: support fixing these so that:
-    //1. users can't stretch the field by adding a pixel with a massive offset.
-    //2. incomplete / sparse devices are still layed out correctly in a known space
-    this.minX = 0;
-    this.maxX = 0;
-    this.minY = 0;
-    this.maxY = 0;
+    this.minX = process.env.FIELD_MIN_X || 0;
+    this.maxX = process.env.FIELD_MAX_X || 0;
+    this.minY = process.env.FIELD_MIN_Y || 0;
+    this.maxY = process.env.FIELD_MAX_Y || 0;
+
+    this.dynamicFieldSize =
+      FIELD_MIN_X in process.env &&
+      FIELD_MAX_X in process.env &&
+      FIELD_MIN_Y in process.env &&
+      FIELD_MAX_Y in process.env;
 
     this.e131Cache = {};
     this.visualiserData = { devices: {} };
@@ -69,8 +72,9 @@ export class DeviceStore {
     const device = { id, x, y, ipAddr, pixels: Device.parsePixels(pixels) };
     this.devices[id] = device;
 
-    //update global min/max
     var globalLimitsChanged = false;
+    if (this.dynamicFieldSize) {
+      //update global min/max
     if (x < this.minX) {
       this.minX = x;
       globalLimitsChanged = true;
@@ -86,6 +90,21 @@ export class DeviceStore {
     if (y > this.maxY) {
       this.maxY = y;
       globalLimitsChanged = true;
+      }
+    } else {
+      //pin the input to the field size.
+      if (x < this.minX) {
+        x = this.minX;
+      }
+      if (x > this.maxX) {
+        x = this.maxX;
+      }
+      if (y < this.minY) {
+        y = this.minY;
+      }
+      if (y > this.maxY) {
+        y = this.maxY;
+      }
     }
 
     //calculate local min/max
