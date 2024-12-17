@@ -19,7 +19,7 @@ async function connectAndGetInfo() {
 
   return {
     improv,
-    isWLED: improv.info.firmware !== "WLED",
+    isWLED: improv.info.firmware === "WLED",
     wledVersion: improv.info.version,
   };
 }
@@ -80,5 +80,7 @@ export async function startEnrollment({ wifiSsid, wifiPassword }) {
     console.log("WLED controller has host " + host);
 
     // TODO: just load this up on the main enrollment page or should we wait to see it on the server via bonjour?
+
+    // TODO: offer to change the hostname?
   }
 }
