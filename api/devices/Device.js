@@ -62,4 +62,8 @@ class PixelLocation {
     this.x = x;
     this.y = y;
   }
+
+  toJSON() {
+    return { x: this.x, y: this.y };
+  }
 }

@@ -13,10 +13,13 @@ import { DeviceScanner } from "./devices/DeviceScanner.js";
 import { loadDemoData, targetFps as demoTargetFps } from "./demoData.js";
 
 const devices = new DeviceStore();
+await devices.init();
 
 // const targetFps = 30;
 const targetFps = demoTargetFps;
-loadDemoData(devices);
+if (devices.isEmpty()) {
+  loadDemoData(devices);
+}
 
 const deviceScanner = new DeviceScanner();
 
@@ -73,4 +76,4 @@ setInterval(() => {
 
 console.log("Started");
 
-export default app;
+export { app, devices, deviceScanner };

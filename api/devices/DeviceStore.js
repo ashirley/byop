@@ -1,27 +1,27 @@
 import { spatialRainbow } from "@byop/demoData";
 import { Device } from "./Device.js";
+import sqlite3 from "sqlite3";
 
 import e131 from "e131";
 
 export class DeviceStore {
-  constructor() {
-    this.devices = {};
-    this.nextId = 0;
-
+  async init() {
     this.minX = process.env.FIELD_MIN_X || 0;
     this.maxX = process.env.FIELD_MAX_X || 0;
     this.minY = process.env.FIELD_MIN_Y || 0;
     this.maxY = process.env.FIELD_MAX_Y || 0;
 
     this.dynamicFieldSize =
-      FIELD_MIN_X in process.env &&
-      FIELD_MAX_X in process.env &&
-      FIELD_MIN_Y in process.env &&
-      FIELD_MAX_Y in process.env;
+      "FIELD_MIN_X" in process.env &&
+      "FIELD_MAX_X" in process.env &&
+      "FIELD_MIN_Y" in process.env &&
+      "FIELD_MAX_Y" in process.env;
 
     this.e131Cache = {};
     this.visualiserData = { devices: {} };
     this.visualiserDataBuffer = { devices: {} }; //store the data while it is being updated.
+
+    await this.loadDeviceData();
 
     //setup an sACN server to receive data
     const listenForDmx = true;
@@ -30,16 +30,16 @@ export class DeviceStore {
       const dmxRows = 13;
       const dmxColumns = 13;
 
-      var server = new e131.Server();
+      this.e131Server = new e131.Server();
       const self = this;
-      server.on("listening", function () {
+      this.e131Server.on("listening", function () {
         console.log(
           "sACN server listening on port %d, universes %j",
           this.port,
           this.universes
         );
       });
-      server.on("packet", function (packet) {
+      this.e131Server.on("packet", function (packet) {
         //check we got as much as we were expecting.
         if (packet.getSlotsData().length !== dmxRows * dmxColumns * 3) {
           console.error(
@@ -66,12 +66,26 @@ export class DeviceStore {
     return this.devices;
   }
 
+  isEmpty() {
+    return Object.keys(this.devices).length === 0;
+  }
+
   addDevice(x, y, ipAddr, pixels) {
     const id = this.nextId++;
 
-    const device = { id, x, y, ipAddr, pixels: Device.parsePixels(pixels) };
-    this.devices[id] = device;
+    this.addDevice0(id, x, y, ipAddr, pixels);
+    this.saveDeviceData(id);
+  }
 
+  /**
+   * Add the device without saving to the DB. Used internally.
+   * @param {*} id
+   * @param {*} x
+   * @param {*} y
+   * @param {*} ipAddr
+   * @param {*} pixels
+   */
+  addDevice0(id, x, y, ipAddr, pixels) {
     var globalLimitsChanged = false;
     if (this.dynamicFieldSize) {
       //update global min/max
@@ -106,6 +120,9 @@ export class DeviceStore {
         y = this.maxY;
       }
     }
+
+    const device = { id, x, y, ipAddr, pixels: Device.parsePixels(pixels) };
+    this.devices[id] = device;
 
     //calculate local min/max
     const allPixelX = Object.entries(device.pixels).map(([_, p]) => p.x);
@@ -327,6 +344,118 @@ export class DeviceStore {
     this.visualiserData = this.visualiserDataBuffer;
     this.visualiserDataBuffer = tmp;
     // console.log(JSON.stringify(this.visualiserData));
+  }
+
+  async loadDeviceData() {
+    this.devices = {};
+
+    if ("SQLITE_FILE" in process.env) {
+      return new Promise((resolve, jeject) => {
+        this.db = new sqlite3.Database(process.env["SQLITE_FILE"]);
+
+        this.db.serialize(() => {
+          // initialise the schema
+          this.db.run(
+            "CREATE TABLE IF NOT EXISTS device (id NUMERIC, x NUMERIC, y NUMERIC, ipAddr TEXT, pixels TEXT)"
+          );
+
+          // const stmt = this.db.prepare("INSERT INTO lorem VALUES (?)");
+          // for (let i = 0; i < 10; i++) {
+          //     stmt.run("Ipsum " + i);
+          // }
+          // stmt.finalize();
+
+          //TODO: error handling
+
+          this.db.each(
+            "SELECT * from device",
+            (err, row) => {
+              console.debug("Loading device " + row.id + " from database");
+              //TODO: should this JSON.parse be here or in Device.parsePixels?
+              this.addDevice0(
+                row.id,
+                row.x,
+                row.y,
+                row.ipAddr,
+                JSON.parse(row.pixels)
+              );
+            },
+            () => {
+              //TODO: nextId
+              this.nextId = 0;
+
+              console.log(
+                "Loaded " +
+                  Object.keys(this.devices).length +
+                  " devices from database"
+              );
+
+              resolve();
+            }
+          );
+        });
+      });
+    } else {
+      this.nextId = 0;
+    }
+  }
+
+  saveDeviceData(id) {
+    const device = this.devices[id];
+
+    if (this.saveDeviceStmt == null) {
+      this.saveDeviceStmt = this.db.prepare(
+        "INSERT INTO device VALUES (?, ?, ?, ?, ?)"
+      );
+    }
+    this.saveDeviceStmt.run(
+      device.id,
+      device.x,
+      device.y,
+      device.ipAddr,
+      JSON.stringify(device.pixels)
+    );
+    // TODO: return a promise
+    // TODO: error handling
+  }
+
+  async shutdown() {
+    const promises = [];
+    if (this.db != null) {
+      promises.push(
+        new Promise((resolve, reject) => {
+          this.saveDeviceStmt.finalize(() => {
+            this.db.close((closeResult) => {
+              if (closeResult === null) {
+                resolve();
+              } else {
+                reject(closeResult);
+              }
+            });
+          });
+        })
+      );
+    }
+
+    if (this.e131Server != null) {
+      promises.push(
+        new Promise((resolve, reject) => {
+          this.e131Server.on("close", () => {
+            resolve();
+          });
+        })
+      );
+      this.e131Server.close();
+    }
+
+    return Promise.all(promises).then(
+      () => {
+        console.log("shut down DeviceStore");
+      },
+      (result) => {
+        console.log("Error shutting down DeviceStore - " + result);
+      }
+    );
   }
 }
 

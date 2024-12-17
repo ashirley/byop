@@ -5,8 +5,8 @@ export class DeviceScanner {
     this.existingDevices = store;
     this.knownDevices = { foo: "bar" };
 
-    const bonjour = new Bonjour();
-    const browser = bonjour.find({ type: "wled" });
+    this.bonjour = new Bonjour();
+    const browser = this.bonjour.find({ type: "wled" });
 
     browser.on("up", (service) => {
       console.log("service up: ", service, this.knownDevices[service.name]);
@@ -24,5 +24,13 @@ export class DeviceScanner {
 
   getUnregisteredDevices() {
     return this.knownDevices; //TODO: filter out already registered devices.
+  }
+
+  async shutdown() {
+    return new Promise((resolve) => {
+      this.bonjour.destroy(() => {
+        resolve();
+      });
+    });
   }
 }

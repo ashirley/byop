@@ -1,6 +1,7 @@
 import { sampleDevices, targetFps as demoTargetFps } from "@byop/demoData";
 
 export const loadDemoData = (devices) => {
+  console.log("Loading DemoData");
   const sampleDevicesObj = sampleDevices();
   for (const [_, device] of Object.entries(sampleDevicesObj.devices)) {
     devices.addDevice(
