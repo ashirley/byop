@@ -68,7 +68,7 @@ app.use(function (err, req, res, next) {
 });
 
 setInterval(() => {
-  devices.update();
+  devices.updatePixelColors();
   for (const c of expressWs.getWss().clients) {
     c.send(JSON.stringify(devices.visualiserData));
   }

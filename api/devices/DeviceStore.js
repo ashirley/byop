@@ -59,6 +59,13 @@ export class DeviceStore {
         self.dmxData.source = packet.getSourceName().replace(/\0*$/, "");
       });
     }
+
+    this.statusUpdateCount = 0;
+    await this.updateDeviceStatus();
+
+    setInterval(() => {
+      this.updateDeviceStatus();
+    }, 5000); //poll devices for their status every 5s
   }
 
   //TODO: update the UI as this API will now be slightly different.
@@ -184,7 +191,7 @@ export class DeviceStore {
     }
   }
 
-  update() {
+  updatePixelColors() {
     const timestamp = performance.now();
 
     if (this.dmxData == null) {
@@ -346,6 +353,57 @@ export class DeviceStore {
     // console.log(JSON.stringify(this.visualiserData));
   }
 
+  async updateDeviceStatus() {
+    console.log("updating device status (" + this.statusUpdateCount + ")");
+    console.time("updateDeviceStatus");
+
+    const promises = [];
+
+    for (const [deviceId, device] of Object.entries(this.devices)) {
+      if (device.ipAddr != null) {
+        promises.push(
+          fetch("http://" + device.ipAddr + "/json/info")
+            .then((response) => {
+              return response.json();
+            })
+            .then((responseJson) => {
+              device.ragStatus = this.isGreenStatus(responseJson, device)
+                ? "GREEN"
+                : "AMBER";
+
+              console.log(
+                device.ipAddr,
+                device.ragStatus,
+                responseJson.ver,
+                responseJson.leds.count,
+                responseJson.live,
+                responseJson.wifi.signal
+              );
+            })
+            .catch(function (err) {
+              device.ragStatus = "RED";
+              console.log("Unable to fetch -", err);
+            })
+        );
+      } else {
+        device.ragStatus = "RED";
+      }
+    }
+
+    await Promise.all(promises);
+
+    this.statusUpdateCount++;
+    console.timeEnd("updateDeviceStatus");
+  }
+
+  isGreenStatus(responseJson, device) {
+    return (
+      responseJson.live &&
+      responseJson.leds.count >= device.pixels.length &&
+      responseJson.wifi.signal > 20
+    );
+  }
+
   async loadDeviceData() {
     this.devices = {};
 
@@ -401,6 +459,7 @@ export class DeviceStore {
   }
 
   saveDeviceData(id) {
+    if (this.db != null) {
     const device = this.devices[id];
 
     if (this.saveDeviceStmt == null) {
@@ -415,6 +474,9 @@ export class DeviceStore {
       device.ipAddr,
       JSON.stringify(device.pixels)
     );
+    } else {
+      console.log("No database specified so not saving new device's info");
+    }
     // TODO: return a promise
     // TODO: error handling
   }
@@ -424,6 +486,7 @@ export class DeviceStore {
     if (this.db != null) {
       promises.push(
         new Promise((resolve, reject) => {
+          if (this.saveDeviceStmt != null) {
           this.saveDeviceStmt.finalize(() => {
             this.db.close((closeResult) => {
               if (closeResult === null) {
@@ -433,6 +496,15 @@ export class DeviceStore {
               }
             });
           });
+          } else {
+            this.db.close((closeResult) => {
+              if (closeResult === null) {
+                resolve();
+              } else {
+                reject(closeResult);
+              }
+            });
+          }
         })
       );
     }
