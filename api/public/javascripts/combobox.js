@@ -100,8 +100,16 @@ class ComboboxAutocomplete {
     }
   }
 
+  //Andrew: added this to provide the data-text option
+  getOptionContent(node) {
+    if (node.getAttribute("data-text")) {
+      return node.getAttribute("data-text");
+    }
+    return node.textContent;
+  }
+
   getLowercaseContent(node) {
-    return node.textContent.toLowerCase();
+    return this.getOptionContent(node).toLowerCase();
   }
 
   isOptionInView(option) {
@@ -145,16 +153,17 @@ class ComboboxAutocomplete {
       this.setActiveDescendant(this.option);
 
       if (this.isBoth) {
-        this.comboboxNode.value = this.option.textContent;
+        const optionValue = this.getOptionContent(this.option);
+        this.comboboxNode.value = optionValue;
         if (flag) {
           this.comboboxNode.setSelectionRange(
-            this.option.textContent.length,
-            this.option.textContent.length
+            optionValue.length,
+            optionValue.length
           );
         } else {
           this.comboboxNode.setSelectionRange(
             this.filter.length,
-            this.option.textContent.length
+            optionValue.length
           );
         }
       }
@@ -325,7 +334,7 @@ class ComboboxAutocomplete {
     switch (event.key) {
       case "Enter":
         if (this.listboxHasVisualFocus) {
-          this.setValue(this.option.textContent);
+          this.setValue(this.getOptionContent(this.option));
         }
         this.close(true);
         this.setVisualFocusCombobox();
@@ -389,7 +398,7 @@ class ComboboxAutocomplete {
         this.close(true);
         if (this.listboxHasVisualFocus) {
           if (this.option) {
-            this.setValue(this.option.textContent);
+            this.setValue(this.getOptionContent(this.option));
           }
         }
         break;
@@ -573,8 +582,8 @@ class ComboboxAutocomplete {
   // Listbox Option Events
 
   onOptionClick(event) {
-    //Andrew: Added trim
-    this.comboboxNode.value = event.target.textContent.trim();
+    //Andrew: Added trim + changed to currentTarget
+    this.comboboxNode.value = this.getOptionContent(event.currentTarget).trim();
     this.close(true);
   }
 

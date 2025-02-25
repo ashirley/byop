@@ -36,7 +36,9 @@ router.post("/devices/new", function (req, res, next) {
 
 router.get("/devices/new", function (req, res, next) {
   const unregDevices = req.deviceScanner.getUnregisteredDevices();
-  const latestUnregDevices = Object.keys(unregDevices).slice(-10);
+  const latestUnregDevices = Object.entries(unregDevices)
+    .slice(-10)
+    .map(([k, v]) => Object.assign({}, v, { name: k }));
 
   res.render("newdevice", {
     unregisteredDevices: latestUnregDevices,

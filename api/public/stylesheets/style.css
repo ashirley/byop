@@ -79,3 +79,18 @@ a {
   width: 100%;
   margin-bottom: .5em;
 }
+
+.statusIcon {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border-radius: 50%;
+}
+
+.statusIcon--up {
+  background: green;
+}
+
+.statusIcon--down {
+  background: red;
+}

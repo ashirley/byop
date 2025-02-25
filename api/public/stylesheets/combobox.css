@@ -5,6 +5,7 @@
   .combobox .group {
     display: inline-flex;
     cursor: pointer;
+    width: 100%;
   }
   
   .combobox input,
@@ -22,7 +23,7 @@
   }
   
   .combobox input {
-    width: 150px;
+    width: 100%;
     outline: none;
     font-size: 87.5%;
     padding: 1px 3px;
@@ -51,7 +52,7 @@
     box-sizing: border-box;
     border: 2px currentcolor solid;
     max-height: 250px;
-    width: 170px;
+    width: 100%;
     overflow: scroll;
     overflow-x: hidden;
     font-size: 87.5%;
@@ -64,6 +65,7 @@
     padding-left: 3px;
     padding-top: 2px;
     padding-bottom: 2px;
+    border-bottom: 1px currentcolor solid;
   }
   
   /* focus and hover styling */

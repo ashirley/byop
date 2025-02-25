@@ -38,9 +38,9 @@
     {{!-- TODO: refresh this list / make it live, include more info to help choose like firstSeen and online status --}}
     <label class="newdevicesform__ipaddr-label section-list" for="ipAddr">IP Address</label>
     {{!-- Taken from https://www.w3.org/WAI/ARIA/apg/patterns/combobox/examples/combobox-autocomplete-list/ --}}
-    <div class="combobox combobox-list section-list">
+    <div class="combobox combobox-list section-list newdevicesform__ipaddr-input">
         <div class="group">
-            <input id="ipAddr" class="cb_edit newdevicesform__ipaddr-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false"
+            <input id="ipAddr" class="cb_edit newdevicesform__ipaddr-input" type="text" role="combobox" autocomplete="off" aria-autocomplete="list" aria-expanded="false"
                 aria-controls="newdevicesform__ipaddr-input-controls" name="ipAddr">
             <button type="button" id="cb1-button" tabindex="-1" aria-label="States" aria-expanded="false" aria-controls="cb1-listbox" data-initially-hidden>
                 <svg width="18" height="16" aria-hidden="true" focusable="false" style="forced-color-adjust: auto">
@@ -51,8 +51,12 @@
         </div>
         <ul id="newdevicesform__ipaddr-input-controls" role="listbox" aria-label="IP Addresses">
             {{#each unregisteredDevices}}
-            <li role="option">
-                {{this}}
+            <li role="option" data-text="{{host}}">
+                <div>
+                    <h3>{{host}}</h3>
+                    <div>First Seen: {{formatDate firstSeen}}</div>
+                    <div><span class="statusIcon {{#if up}}statusIcon--up{{else}}statusIcon--down{{/if}}"></span>{{#if up}}{{else}}<span> Last Up: {{formatDate lastUp}}{{/if}}</span></div>
+                </div>
             </li>
             {{/each}}
         </ul>

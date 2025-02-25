@@ -21,7 +21,7 @@ if (devices.isEmpty()) {
   loadDemoData(devices);
 }
 
-const deviceScanner = new DeviceScanner();
+const deviceScanner = new DeviceScanner(devices);
 
 const expressWs = expressWsFn(express());
 const app = expressWs.app;
@@ -29,7 +29,7 @@ const app = expressWs.app;
 const visualiserRouter = visualiserRouterFn();
 
 // view engine setup
-import { engine } from "express-handlebars";
+import { engine } from "./handlebarsEngine.js";
 app.engine("handlebars", engine());
 app.set("views", "./views");
 app.set("view engine", "handlebars");
