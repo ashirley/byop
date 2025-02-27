@@ -44,7 +44,6 @@ app.use(multer().none());
 // expose devices to the routers
 app.use(function (req, res, next) {
   req.devices = devices;
-  req.deviceScanner = deviceScanner;
   next();
 });
 

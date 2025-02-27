@@ -18,15 +18,15 @@ router.get("/", function (req, res, next) {
 router.get("/devices", function (req, res, next) {
   res.render("devices", {
     //TODO: proper paging, not just static top 10
-    existingDevices: page(req.devices.existingDevices(), 0, 10),
+    registeredDevices: page(req.devices.getRegisteredDevices(), 0, 10),
   });
 });
 
 router.post("/devices/new", function (req, res, next) {
-  req.devices.addDevice(
+  req.devices.registerDevice(
     req.body.x,
     req.body.y,
-    req.body.ipAddr,
+    req.body.host,
     JSON.parse(
       req.body.drawnPixelLocations || req.body.pixelLocations || "[[0,0]]"
     )
@@ -35,7 +35,7 @@ router.post("/devices/new", function (req, res, next) {
 });
 
 router.get("/devices/new", function (req, res, next) {
-  const unregDevices = req.deviceScanner.getUnregisteredDevices();
+  const unregDevices = req.devices.getUnregisteredDevices();
   const latestUnregDevices = Object.entries(unregDevices)
     .slice(-10)
     .map(([k, v]) => Object.assign({}, v, { name: k }));

@@ -1,8 +1,8 @@
 export class Device {
-  constructor(id, x, y, ipAddr, pixels) {
+  constructor(id, x, y, host, pixels) {
     this.id = id;
     this.location = { x, y };
-    this.ipAddr = ipAddr;
+    this.host = host;
     this.pixels = Device.parsePixels(pixels);
     const allX = this.pixels.map((p) => p.x);
     const allY = this.pixels.map((p) => p.y);

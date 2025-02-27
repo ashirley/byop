@@ -23,7 +23,7 @@ a {
 
 .newdevicesform__x-label,
 .newdevicesform__y-label,
-.newdevicesform__ipaddr-label,
+.newdevicesform__host-label,
 .newdevicesform__pixelLocations-label,
 .newdevicesform__pixelCount-label,
 .newdevicesform__drawnPixelLocations-label {
@@ -33,7 +33,7 @@ a {
 
 .newdevicesform__x-input,
 .newdevicesform__y-input,
-.newdevicesform__ipaddr-input,
+.newdevicesform__host-input,
 .newdevicesform__pixelLocations-input,
 .newdevicesform__pixelCount-input,
 .newdevicesform__drawnPixelLocations-input {

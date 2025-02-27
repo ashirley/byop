@@ -1,11 +1,11 @@
 <h1>Devices</h1>
-{{#each existingDevices}}
+{{#each registeredDevices}}
 <div>
   <ul>
     <li>id: {{ id }}</li>
-    <li>status: {{ ragStatus }}</li>
+    <li>status: {{ up }} {{ warningMessages }}</li>
     <li>location: ({{ x }}, {{ y }})</li>
-    <li>ipAddr: {{ ipAddr }}</li>
+    <li>host: {{ host }}</li>
     <li>pixelCount: {{ pixels.length }}</li>
   </ul>
 </div>

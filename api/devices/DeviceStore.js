@@ -69,7 +69,7 @@ export class DeviceStore {
   }
 
   //TODO: update the UI as this API will now be slightly different.
-  existingDevices() {
+  getRegisteredDevices() {
     return this.devices;
   }
 
@@ -77,22 +77,22 @@ export class DeviceStore {
     return Object.keys(this.devices).length === 0;
   }
 
-  addDevice(x, y, ipAddr, pixels) {
+  registerDevice(x, y, host, pixels) {
     const id = this.nextId++;
 
-    this.addDevice0(id, x, y, ipAddr, pixels);
+    this.registerDevice0(id, x, y, host, pixels);
     this.saveDeviceData(id);
   }
 
   /**
-   * Add the device without saving to the DB. Used internally.
+   * Add the device as a registered device without saving to the DB. Used internally.
    * @param {*} id
    * @param {*} x
    * @param {*} y
-   * @param {*} ipAddr
+   * @param {*} host
    * @param {*} pixels
    */
-  addDevice0(id, x, y, ipAddr, pixels) {
+  registerDevice0(id, x, y, host, pixels) {
     var globalLimitsChanged = false;
     if (this.dynamicFieldSize) {
       //update global min/max
@@ -128,7 +128,16 @@ export class DeviceStore {
       }
     }
 
-    const device = { id, x, y, ipAddr, pixels: Device.parsePixels(pixels) };
+    const matchingUnregisteredDevice = this.unregisteredDevices[host];
+    if (matchingUnregisteredDevice != null) {
+      //now this is being registered, remove from unregistered list.
+      delete this.unregisteredDevices[host];
+    }
+
+    const device = matchingUnregisteredDevice || { x, y, host };
+    device.id = id;
+    device.pixels = Device.parsePixels(pixels);
+
     this.devices[id] = device;
 
     //calculate local min/max
@@ -179,8 +188,8 @@ export class DeviceStore {
       }
     }
 
-    if (ipAddr) {
-      var client = new e131.Client(ipAddr);
+    if (host) {
+      var client = new e131.Client(host);
       var packet = client.createPacket(
         3 * Object.entries(device.pixels).length
       );
@@ -360,20 +369,26 @@ export class DeviceStore {
     const promises = [];
 
     for (const [deviceId, device] of Object.entries(this.devices)) {
-      if (device.ipAddr != null) {
+      if (device.host != null) {
         promises.push(
-          fetch("http://" + device.ipAddr + "/json/info")
+          fetch("http://" + device.host + "/json/info")
             .then((response) => {
               return response.json();
             })
             .then((responseJson) => {
-              device.ragStatus = this.isGreenStatus(responseJson, device)
-                ? "GREEN"
-                : "AMBER";
+              device.warningMessages = this.extractWarningMessages(
+                responseJson,
+                device
+              );
+              if (!device.up) {
+                //this was down but now seems to be responding so mark it as having come up now
+                device.lastUp = Date.now();
+              }
+              device.up = true;
 
               console.log(
-                device.ipAddr,
-                device.ragStatus,
+                device.host,
+                device.warningMessages,
                 responseJson.ver,
                 responseJson.leds.count,
                 responseJson.live,
@@ -381,12 +396,14 @@ export class DeviceStore {
               );
             })
             .catch(function (err) {
-              device.ragStatus = "RED";
+              device.warningMessages = [];
+              device.up = false;
               console.log("Unable to fetch -", err);
             })
         );
       } else {
-        device.ragStatus = "RED";
+        device.warningMessages = [];
+        device.up = false;
       }
     }
 
@@ -396,25 +413,82 @@ export class DeviceStore {
     console.timeEnd("updateDeviceStatus");
   }
 
-  isGreenStatus(responseJson, device) {
-    return (
-      responseJson.live &&
-      responseJson.leds.count >= device.pixels.length &&
-      responseJson.wifi.signal > 20
-    );
+  extractWarningMessages(responseJson, device) {
+    const retval = [];
+
+    if (!responseJson.live) {
+      retval.push("Not receiving/accepting e.131 stream");
+    }
+    if (responseJson.leds.count < device.pixels.length) {
+      retval.push("fewer physical pixels configured in wled than in byop");
+    }
+    if (responseJson.wifi.signal < 20) {
+      retval.push("Poor wifi signal");
+    }
+
+    return retval;
+  }
+
+  markDeviceUp(host) {
+    const currentDeviceRecord = this.unregisteredDevices[host];
+    console.log("service up: ", currentDeviceRecord);
+    if (currentDeviceRecord) {
+      this.unregisteredDevices[host] = {
+        host,
+        firstSeen: currentDeviceRecord.firstSeen,
+        lastUp: Date.now(),
+        up: true,
+      };
+    } else {
+      this.unregisteredDevices[host] = {
+        host,
+        firstSeen: Date.now(),
+        lastUp: Date.now(),
+        up: true,
+      };
+    }
+  }
+
+  markDeviceUp(host) {
+    const currentDeviceRecord = this.unregisteredDevices[host];
+    console.log("service down: ", currentDeviceRecord);
+    if (currentDeviceRecord) {
+      currentDeviceRecord.lastUp == null;
+      currentDeviceRecord.up == false;
+    }
+  }
+
+  getUnregisteredDevices() {
+    return this.unregisteredDevices;
   }
 
   async loadDeviceData() {
     this.devices = {};
 
+    //TODO: persist this
+    this.unregisteredDevices = {
+      fooHost: {
+        host: "fooHost",
+        firstSeen: Date.now(),
+        lastUp: Date.now(),
+        up: true,
+      },
+      barHost: {
+        host: "barHost",
+        firstSeen: Date.now(),
+        lastUp: Date.now(),
+        up: false,
+      },
+    };
+
     if ("SQLITE_FILE" in process.env) {
-      return new Promise((resolve, jeject) => {
+      return new Promise((resolve, reject) => {
         this.db = new sqlite3.Database(process.env["SQLITE_FILE"]);
 
         this.db.serialize(() => {
           // initialise the schema
           this.db.run(
-            "CREATE TABLE IF NOT EXISTS device (id NUMERIC, x NUMERIC, y NUMERIC, ipAddr TEXT, pixels TEXT)"
+            "CREATE TABLE IF NOT EXISTS device (id NUMERIC, x NUMERIC, y NUMERIC, host TEXT, pixels TEXT)"
           );
 
           // const stmt = this.db.prepare("INSERT INTO lorem VALUES (?)");
@@ -430,11 +504,11 @@ export class DeviceStore {
             (err, row) => {
               console.debug("Loading device " + row.id + " from database");
               //TODO: should this JSON.parse be here or in Device.parsePixels?
-              this.addDevice0(
+              this.registerDevice0(
                 row.id,
                 row.x,
                 row.y,
-                row.ipAddr,
+                row.host,
                 JSON.parse(row.pixels)
               );
             },
@@ -471,7 +545,7 @@ export class DeviceStore {
       device.id,
       device.x,
       device.y,
-      device.ipAddr,
+        device.host,
       JSON.stringify(device.pixels)
     );
     } else {

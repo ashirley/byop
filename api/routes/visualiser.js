@@ -20,9 +20,14 @@ const routerfn = () => {
   });
 
   router.post("/devices", function (req, res, next) {
-    req.devices.addDevice(req.body.id, req.body.x, req.body.y, req.body.ipAddr);
+    req.devices.registerDevice(
+      req.body.id,
+      req.body.x,
+      req.body.y,
+      req.body.host
+    );
     res.render("devices", {
-      existingDevices: req.devices.existingDevices(),
+      registeredDevices: req.devices.getRegisteredDevices(),
     });
   });
 
