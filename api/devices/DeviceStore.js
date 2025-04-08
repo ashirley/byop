@@ -230,8 +230,7 @@ export class DeviceStore {
         const t = (Date.now() % 5000) / 5000;
 
         if (this.dmxData == null) {
-          // const c = spatialRainbow(timestamp, pixel);
-          const c = spatialRainbow(timestamp, pixel);
+          const c = spatialRainbow(timestamp, pixel, deviceId, pixelIndex);
           r = c.r;
           g = c.g;
           b = c.b;

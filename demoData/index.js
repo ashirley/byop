@@ -132,7 +132,7 @@ function createSinglePixelDevice(x, y) {
  * @param {*} pixel.lY a local y coordinate for the pixel relative to the device [0,1]
  * @returns rgb and hsl for the given pixel
  */
-export function spatialRainbow(timestamp, pixel) {
+export function spatialRainbow(timestamp, pixel, deviceId, pixelIndex) {
   const localWeight = 0.5;
 
   const t = (timestamp % 5000) / 5000;
