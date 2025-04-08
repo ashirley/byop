@@ -1,26 +1,37 @@
 import { spatialRainbow } from "@byop/demoData";
-import { Device } from "./Device.js";
-import sqlite3 from "sqlite3";
+import { SqliteDao } from "../dao/SqliteDao.js";
 
 import e131 from "e131";
 
 export class DeviceStore {
-  async init() {
-    this.minX = process.env.FIELD_MIN_X || 0;
-    this.maxX = process.env.FIELD_MAX_X || 0;
-    this.minY = process.env.FIELD_MIN_Y || 0;
-    this.maxY = process.env.FIELD_MAX_Y || 0;
+  async init(dao = null) {
+    this.minX = process.env.FIELD_MIN_X;
+    this.maxX = process.env.FIELD_MAX_X;
+    this.minY = process.env.FIELD_MIN_Y;
+    this.maxY = process.env.FIELD_MAX_Y;
 
-    this.dynamicFieldSize =
+    this.dynamicFieldSize = !(
       "FIELD_MIN_X" in process.env &&
       "FIELD_MAX_X" in process.env &&
       "FIELD_MIN_Y" in process.env &&
-      "FIELD_MAX_Y" in process.env;
+      "FIELD_MAX_Y" in process.env
+    );
 
     this.e131Cache = {};
     this.visualiserData = { devices: {} };
     this.visualiserDataBuffer = { devices: {} }; //store the data while it is being updated.
 
+    if (dao != null) {
+      this.db = dao;
+    } else {
+      if ("SQLITE_FILE" in process.env) {
+        this.db = new SqliteDao();
+        await this.db.init(process.env["SQLITE_FILE"]);
+      } else {
+        // create an in-memory dao
+        // TODO
+      }
+    }
     await this.loadDeviceData();
 
     //setup an sACN server to receive data
@@ -55,7 +66,7 @@ export class DeviceStore {
           dmxRows
         );
 
-        //NB. sourecname is padded with null characters which make comparing with something else awkward so trim them (took a long time to spot that!)
+        //NB. sourcename is padded with null characters which make comparing with something else awkward so trim them (took a long time to spot that!)
         self.dmxData.source = packet.getSourceName().replace(/\0*$/, "");
       });
     }
@@ -63,7 +74,7 @@ export class DeviceStore {
     this.statusUpdateCount = 0;
     await this.updateDeviceStatus();
 
-    setInterval(() => {
+    this.statusUpdater = setInterval(() => {
       this.updateDeviceStatus();
     }, 5000); //poll devices for their status every 5s
   }
@@ -96,21 +107,21 @@ export class DeviceStore {
     var globalLimitsChanged = false;
     if (this.dynamicFieldSize) {
       //update global min/max
-    if (x < this.minX) {
-      this.minX = x;
-      globalLimitsChanged = true;
-    }
-    if (x > this.maxX) {
-      this.maxX = x;
-      globalLimitsChanged = true;
-    }
-    if (y < this.minY) {
-      this.minY = y;
-      globalLimitsChanged = true;
-    }
-    if (y > this.maxY) {
-      this.maxY = y;
-      globalLimitsChanged = true;
+      if (this.minX == null || x < this.minX) {
+        this.minX = x;
+        globalLimitsChanged = true;
+      }
+      if (this.maxX == null || x > this.maxX) {
+        this.maxX = x;
+        globalLimitsChanged = true;
+      }
+      if (this.minY == null || y < this.minY) {
+        this.minY = y;
+        globalLimitsChanged = true;
+      }
+      if (this.maxY == null || y > this.maxY) {
+        this.maxY = y;
+        globalLimitsChanged = true;
       }
     } else {
       //pin the input to the field size.
@@ -136,13 +147,13 @@ export class DeviceStore {
 
     const device = matchingUnregisteredDevice || { x, y, host };
     device.id = id;
-    device.pixels = Device.parsePixels(pixels);
+    device.pixels = DeviceStore.parsePixels(pixels);
 
     this.devices[id] = device;
 
     //calculate local min/max
-    const allPixelX = Object.entries(device.pixels).map(([_, p]) => p.x);
-    const allPixelY = Object.entries(device.pixels).map(([_, p]) => p.y);
+    const allPixelX = device.pixels.map((p) => p.x);
+    const allPixelY = device.pixels.map((p) => p.y);
     device.minX = Math.min(...allPixelX);
     device.maxX = Math.max(...allPixelX);
     device.minY = Math.min(...allPixelY);
@@ -188,11 +199,10 @@ export class DeviceStore {
       }
     }
 
+    //TODO: refactor to a listener
     if (host) {
       var client = new e131.Client(host);
-      var packet = client.createPacket(
-        3 * Object.entries(device.pixels).length
-      );
+      var packet = client.createPacket(3 * device.pixels.length);
       packet.setSourceName("BYOP");
       packet.setUniverse(0x01);
 
@@ -362,6 +372,7 @@ export class DeviceStore {
     // console.log(JSON.stringify(this.visualiserData));
   }
 
+  //TODO: factor out? and test
   async updateDeviceStatus() {
     console.log("updating device status (" + this.statusUpdateCount + ")");
     console.time("updateDeviceStatus");
@@ -449,12 +460,12 @@ export class DeviceStore {
     }
   }
 
-  markDeviceUp(host) {
+  markDeviceDown(host) {
     const currentDeviceRecord = this.unregisteredDevices[host];
     console.log("service down: ", currentDeviceRecord);
     if (currentDeviceRecord) {
-      currentDeviceRecord.lastUp == null;
-      currentDeviceRecord.up == false;
+      currentDeviceRecord.lastUp = null;
+      currentDeviceRecord.up = false;
     }
   }
 
@@ -467,120 +478,44 @@ export class DeviceStore {
 
     //TODO: persist this
     this.unregisteredDevices = {
-      fooHost: {
-        host: "fooHost",
-        firstSeen: Date.now(),
-        lastUp: Date.now(),
-        up: true,
-      },
-      barHost: {
-        host: "barHost",
-        firstSeen: Date.now(),
-        lastUp: Date.now(),
-        up: false,
-      },
+      // fooHost: {
+      //   host: "fooHost",
+      //   firstSeen: Date.now(),
+      //   lastUp: Date.now(),
+      //   up: true,
+      // },
+      // barHost: {
+      //   host: "barHost",
+      //   firstSeen: Date.now(),
+      //   lastUp: Date.now(),
+      //   up: false,
+      // },
     };
 
-    if ("SQLITE_FILE" in process.env) {
-      return new Promise((resolve, reject) => {
-        this.db = new sqlite3.Database(process.env["SQLITE_FILE"]);
-
-        this.db.serialize(() => {
-          // initialise the schema
-          this.db.run(
-            "CREATE TABLE IF NOT EXISTS device (id NUMERIC, x NUMERIC, y NUMERIC, host TEXT, pixels TEXT)"
-          );
-
-          // const stmt = this.db.prepare("INSERT INTO lorem VALUES (?)");
-          // for (let i = 0; i < 10; i++) {
-          //     stmt.run("Ipsum " + i);
-          // }
-          // stmt.finalize();
-
-          //TODO: error handling
-
-          this.db.each(
-            "SELECT * from device",
-            (err, row) => {
-              console.debug("Loading device " + row.id + " from database");
-              //TODO: should this JSON.parse be here or in Device.parsePixels?
-              this.registerDevice0(
-                row.id,
-                row.x,
-                row.y,
-                row.host,
-                JSON.parse(row.pixels)
-              );
-            },
-            () => {
-              //TODO: nextId
-              this.nextId = 0;
-
-              console.log(
-                "Loaded " +
-                  Object.keys(this.devices).length +
-                  " devices from database"
-              );
-
-              resolve();
-            }
-          );
-        });
-      });
+    if (this.db != null) {
+      this.nextId = await this.db.loadRegisteredDeviceData(
+        this.registerDevice0
+      );
     } else {
       this.nextId = 0;
     }
   }
 
+  // TODO: return a promise
   saveDeviceData(id) {
     if (this.db != null) {
-    const device = this.devices[id];
+      const device = this.devices[id];
 
-    if (this.saveDeviceStmt == null) {
-      this.saveDeviceStmt = this.db.prepare(
-        "INSERT INTO device VALUES (?, ?, ?, ?, ?)"
-      );
-    }
-    this.saveDeviceStmt.run(
-      device.id,
-      device.x,
-      device.y,
-        device.host,
-      JSON.stringify(device.pixels)
-    );
+      this.db.saveDeviceData(device);
     } else {
       console.log("No database specified so not saving new device's info");
     }
-    // TODO: return a promise
-    // TODO: error handling
   }
 
   async shutdown() {
     const promises = [];
     if (this.db != null) {
-      promises.push(
-        new Promise((resolve, reject) => {
-          if (this.saveDeviceStmt != null) {
-          this.saveDeviceStmt.finalize(() => {
-            this.db.close((closeResult) => {
-              if (closeResult === null) {
-                resolve();
-              } else {
-                reject(closeResult);
-              }
-            });
-          });
-          } else {
-            this.db.close((closeResult) => {
-              if (closeResult === null) {
-                resolve();
-              } else {
-                reject(closeResult);
-              }
-            });
-          }
-        })
-      );
+      promises.push(this.db.shutdown());
     }
 
     if (this.e131Server != null) {
@@ -594,6 +529,16 @@ export class DeviceStore {
       this.e131Server.close();
     }
 
+    if (this.statusUpdater != null) {
+      promises.push(
+        new Promise((resolve, reject) => {
+          clearInterval(this.statusUpdater);
+          this.statusUpdater = null;
+          resolve();
+        })
+      );
+    }
+
     return Promise.all(promises).then(
       () => {
         console.log("shut down DeviceStore");
@@ -602,6 +547,46 @@ export class DeviceStore {
         console.log("Error shutting down DeviceStore - " + result);
       }
     );
+  }
+
+  static parsePixels(pixels) {
+    if (pixels == null) {
+      return [{ x: 0, y: 0 }];
+    }
+    if (Array.isArray(pixels)) {
+      const retval = [];
+      for (const [pixelIndex, pixel] of pixels.entries()) {
+        if (Array.isArray(pixel)) {
+          if (pixel.length === 2) {
+            retval.push({ x: pixel[0], y: pixel[1] });
+          } else if (pixel.length === 3) {
+            console.log(
+              `Ignoring the 3rd dimension for pixel ${pixelIndex} as we only map in 2D`
+            );
+            retval.push({ x: pixel[0], y: pixel[1] });
+          } else {
+            throw new Error(`Couldn't parse pixel ${pixelIndex} (${pixel})`);
+          }
+        } else if (typeof pixel === "object" && "x" in pixel && "y" in pixel) {
+          if ("z" in pixel) {
+            console.log(
+              `Ignoring the 3rd dimension for pixel ${pixelIndex} as we only map in 2D`
+            );
+          }
+          retval.push({ x: pixel.x, y: pixel.y });
+        } else {
+          //TODO: parse strings?
+
+          throw new Error(
+            `Couldn't parse pixel ${pixelIndex} (${typeof pixel} - ${pixel})`
+          );
+        }
+      }
+      return retval;
+    }
+
+    //TODO: parse strings?
+    throw new Error(`Couldn't parse pixels (${typeof pixels} - ${pixels})`);
   }
 }
 
