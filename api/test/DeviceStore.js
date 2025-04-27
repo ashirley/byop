@@ -5,13 +5,28 @@ import { DeviceStore } from "../devices/DeviceStore.js";
 
 var store = new DeviceStore();
 var dao;
+var colorSource;
+var pixelListener;
+
 beforeEach(async function () {
   store = new DeviceStore();
   dao = td.object(["loadRegisteredDeviceData", "saveDeviceData", "shutdown"]);
   td.when(dao.loadRegisteredDeviceData(td.matchers.anything())).thenResolve(0);
   td.when(dao.shutdown()).thenResolve();
 
-  await store.init(dao);
+  colorSource = td.object(["calculate", "getSource", "shutdown"]);
+  td.when(colorSource.getSource()).thenReturn("test-source");
+  td.when(colorSource.shutdown()).thenResolve();
+
+  pixelListener = td.object([
+    "newDevice",
+    "startedUpdatingDevices",
+    "updatePixelColor",
+    "finishedUpdatingDevice",
+    "finishedUpdatingDevices",
+  ]);
+
+  await store.init(dao, colorSource, pixelListener);
 });
 
 afterEach(async function () {
@@ -106,6 +121,60 @@ describe("DeviceStore", function () {
       assert.equal(store.getRegisteredDevices()[1].pixels[0].gY, 0.0);
       assert.equal(store.getRegisteredDevices()[0].pixels[0].gX, 1.0);
       assert.equal(store.getRegisteredDevices()[0].pixels[0].gY, 1.0);
+    });
+
+    it("static field constrains input", async function () {
+      try {
+        process.env.FIELD_MIN_X = 10;
+        process.env.FIELD_MAX_X = 20;
+        process.env.FIELD_MIN_Y = 30;
+        process.env.FIELD_MAX_Y = 40;
+
+        store.shutdown();
+        await store.init(dao, colorSource, pixelListener);
+
+        assert.equal(store.minX, 10);
+        assert.equal(store.maxX, 20);
+        assert.equal(store.minY, 30);
+        assert.equal(store.maxY, 40);
+
+        store.registerDevice(15, 35, "fooHost", [[1, 1]]);
+        store.registerDevice(5, 45, "barHost", [[1, 1]]);
+        store.registerDevice(25, 5, "bazHost", [[1, 1]]);
+
+        td.verify(
+          dao.saveDeviceData(
+            td.matchers.contains({
+              x: 15,
+              y: 35,
+              host: "fooHost",
+            })
+          )
+        );
+        td.verify(
+          dao.saveDeviceData(
+            td.matchers.contains({
+              x: 10,
+              y: 40,
+              host: "barHost",
+            })
+          )
+        );
+        td.verify(
+          dao.saveDeviceData(
+            td.matchers.contains({
+              x: 20,
+              y: 30,
+              host: "bazHost",
+            })
+          )
+        );
+      } finally {
+        delete process.env.FIELD_MIN_X;
+        delete process.env.FIELD_MAX_X;
+        delete process.env.FIELD_MIN_Y;
+        delete process.env.FIELD_MAX_Y;
+      }
     });
 
     it("normalised positions updated when dynamic field changes", function () {
@@ -220,5 +289,86 @@ describe("DeviceStore", function () {
     });
   });
 
-  describe("#updatePixelColors()", function () {});
+  describe("#updatePixelColors()", function () {
+    it("considers all pixels and calls listeners correctly", function () {
+      td.when(
+        colorSource.calculate(
+          td.matchers.anything(), //timestamp
+          td.matchers.anything(), //pixel
+          "0", //deviceId
+          "0" //pixelIndex
+        )
+      ).thenReturn({ r: 0, g: 0, b: 0 });
+
+      td.when(
+        colorSource.calculate(
+          td.matchers.anything(), //timestamp
+          td.matchers.anything(), //pixel
+          "1", //deviceId
+          "0" //pixelIndex
+        )
+      ).thenReturn({ r: 1, g: 0, b: 0 });
+
+      td.when(
+        colorSource.calculate(
+          td.matchers.anything(), //timestamp
+          td.matchers.anything(), //pixel
+          "1", //deviceId
+          "1" //pixelIndex
+        )
+      ).thenReturn({ r: 1, g: 1, b: 0 });
+
+      store.registerDevice(0, 0, "fooHost", [[1, 1]]);
+      store.registerDevice(0, 1, "barHost", [
+        [1, 1],
+        [1, 1],
+      ]);
+      store.updatePixelColors();
+
+      td.verify(pixelListener.startedUpdatingDevices("test-source"), {
+        times: 1,
+      });
+      td.verify(
+        pixelListener.updatePixelColor(
+          "0", // deviceId
+          "0", // pixelIndex
+          0, // r
+          0, // g
+          0, // b
+          td.matchers.anything(), // device
+          td.matchers.anything() // pixel
+        ),
+        { times: 1 }
+      );
+      td.verify(pixelListener.finishedUpdatingDevice("0"), { times: 1 });
+
+      td.verify(
+        pixelListener.updatePixelColor(
+          "1", // deviceId
+          "0", // pixelIndex
+          1, // r
+          0, // g
+          0, // b
+          td.matchers.anything(), // device
+          td.matchers.anything() // pixel
+        ),
+        { times: 1 }
+      );
+      td.verify(
+        pixelListener.updatePixelColor(
+          "1", // deviceId
+          "1", // pixelIndex
+          1, // r
+          1, // g
+          0, // b
+          td.matchers.anything(), // device
+          td.matchers.anything() // pixel
+        ),
+        { times: 1 }
+      );
+      td.verify(pixelListener.finishedUpdatingDevice("1"), { times: 1 });
+
+      td.verify(pixelListener.finishedUpdatingDevices(), { times: 1 });
+    });
+  });
 });

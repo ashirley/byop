@@ -39,15 +39,11 @@ export class SqliteDao {
             //TODO: should this JSON.parse be here or in Device.parsePixels?
             cb(row.id, row.x, row.y, row.host, JSON.parse(row.pixels));
           },
-          () => {
+          (err, count) => {
             //TODO: nextId
             const nextId = 0;
 
-            console.log(
-              "Loaded " +
-                Object.keys(this.devices).length +
-                " devices from database"
-            );
+            console.log("Loaded " + count + " devices from database");
 
             resolve(nextId);
           }

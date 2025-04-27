@@ -1,0 +1,10 @@
+<h1>Device {{ device.id }}</h1>
+<div>
+  <ul>
+    <li>id: {{ device.id }}</li>
+    <li>status: {{ device.up }} {{ device.warningMessages }}</li>
+    <li>location: ({{ device.x }}, {{ device.y }})</li>
+    <li>host: {{ device.host }}</li>
+    <li>pixelCount: {{ device.pixels.length }}</li>
+  </ul>
+</div>

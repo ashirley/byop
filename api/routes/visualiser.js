@@ -9,7 +9,7 @@ const routerfn = () => {
   });
 
   router.get("/api/pixelData", function (req, res, next) {
-    res.json(req.devices.visualiserData);
+    res.json(req.devices.visualiserListener.visualiserData);
   });
 
   router.ws("/api/pixelDataFeed", function (ws, req) {

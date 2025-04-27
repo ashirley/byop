@@ -1,3 +1,6 @@
 public/javascripts/vendor
 .env
 byop.db
+coverage
+.nyc_coverage
+.nyc_output

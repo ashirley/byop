@@ -1,10 +1,12 @@
-import { spatialRainbow } from "@byop/demoData";
 import { SqliteDao } from "../dao/SqliteDao.js";
-
-import e131 from "e131";
+import { DmxColorSource } from "../colorSource/DmxColorSource.js";
+import { DemoDataColorSource } from "../colorSource/DemoDataColorSource.js";
+import { VisualiserPixelListener } from "../pixelListener/VisualiserPixelListener.js";
+import { DmxPixelListener } from "../pixelListener/DmxPixelListener.js";
+import { CompositePixelListener } from "../pixelListener/CompositePixelListener.js";
 
 export class DeviceStore {
-  async init(dao = null) {
+  async init(dao = null, colorSourceIn = null, pixelListenerIn = null) {
     this.minX = process.env.FIELD_MIN_X;
     this.maxX = process.env.FIELD_MAX_X;
     this.minY = process.env.FIELD_MIN_Y;
@@ -17,9 +19,16 @@ export class DeviceStore {
       "FIELD_MAX_Y" in process.env
     );
 
-    this.e131Cache = {};
-    this.visualiserData = { devices: {} };
-    this.visualiserDataBuffer = { devices: {} }; //store the data while it is being updated.
+    if (pixelListenerIn != null) {
+      this.visualiserListener = null;
+      this.pixelListener = pixelListenerIn;
+    } else {
+      this.visualiserListener = new VisualiserPixelListener();
+      this.pixelListener = new CompositePixelListener(
+        this.visualiserListener,
+        new DmxPixelListener()
+      );
+    }
 
     if (dao != null) {
       this.db = dao;
@@ -34,43 +43,22 @@ export class DeviceStore {
     }
     await this.loadDeviceData();
 
-    //setup an sACN server to receive data
-    const listenForDmx = true;
-    if (listenForDmx) {
-      //TODO: make this configurable and support only using a slice of the data we receive on the universe.
-      const dmxRows = 13;
-      const dmxColumns = 13;
+    if (colorSourceIn != null) {
+      this.colorSource = colorSourceIn;
+    } else {
+      const listenForDmx = true;
+      if (listenForDmx) {
+        //setup an sACN server to receive data
+        //TODO: make this configurable and support only using a slice of the data we receive on the universe.
+        const dmxRows = 13;
+        const dmxColumns = 13;
 
-      this.e131Server = new e131.Server();
-      const self = this;
-      this.e131Server.on("listening", function () {
-        console.log(
-          "sACN server listening on port %d, universes %j",
-          this.port,
-          this.universes
-        );
-      });
-      this.e131Server.on("packet", function (packet) {
-        //check we got as much as we were expecting.
-        if (packet.getSlotsData().length !== dmxRows * dmxColumns * 3) {
-          console.error(
-            `recieved wrong amount of dmx data. Got ${
-              packet.getSlotsData().length
-            } but was expecting ${
-              dmxRows * dmxColumns * 3
-            } (${dmxRows} x ${dmxColumns} x 3)`
-          );
-        }
-        self.dmxData = toRGB2dArray(
-          [...packet.getSlotsData()].map((d) => d / 255),
-          dmxRows
-        );
-
-        //NB. sourcename is padded with null characters which make comparing with something else awkward so trim them (took a long time to spot that!)
-        self.dmxData.source = packet.getSourceName().replace(/\0*$/, "");
-      });
+        this.colorSource = new DmxColorSource(dmxRows, dmxColumns);
+      } else {
+        //setup a demodata color source
+        this.colorSource = new DemoDataColorSource();
+      }
     }
-
     this.statusUpdateCount = 0;
     await this.updateDeviceStatus();
 
@@ -79,9 +67,12 @@ export class DeviceStore {
     }, 5000); //poll devices for their status every 5s
   }
 
-  //TODO: update the UI as this API will now be slightly different.
   getRegisteredDevices() {
     return this.devices;
+  }
+
+  getDeviceById(id) {
+    return this.devices[id];
   }
 
   isEmpty() {
@@ -93,6 +84,8 @@ export class DeviceStore {
 
     this.registerDevice0(id, x, y, host, pixels);
     this.saveDeviceData(id);
+
+    return id;
   }
 
   /**
@@ -162,22 +155,22 @@ export class DeviceStore {
     // Create normalised (i.e. 0-1) device/global location (g) and pixel/local location (l)
     const gX =
       this.maxX === this.minX
-        ? 0
+        ? 0.5
         : (device.x - this.minX) / (this.maxX - this.minX);
     const gY =
       this.maxY === this.minY
-        ? 0
+        ? 0.5
         : (device.y - this.minY) / (this.maxY - this.minY);
     for (const [pixelIndex, pixel] of Object.entries(device.pixels)) {
       pixel.gX = gX;
       pixel.gY = gY;
       pixel.lX =
         device.maxX === device.minX
-          ? 0
+          ? 0.5
           : (pixel.x - device.minX) / (device.maxX - device.minX);
       pixel.lY =
         device.maxY === device.minY
-          ? 0
+          ? 0.5
           : (pixel.y - device.minY) / (device.maxY - device.minY);
     }
 
@@ -186,11 +179,11 @@ export class DeviceStore {
       for (const [_, device] of Object.entries(this.devices)) {
         const gX =
           this.maxX === this.minX
-            ? 0
+            ? 0.5
             : (device.x - this.minX) / (this.maxX - this.minX);
         const gY =
           this.maxY === this.minY
-            ? 0
+            ? 0.5
             : (device.y - this.minY) / (this.maxY - this.minY);
         for (const [pixelIndex, pixel] of Object.entries(device.pixels)) {
           pixel.gX = gX;
@@ -199,176 +192,41 @@ export class DeviceStore {
       }
     }
 
-    //TODO: refactor to a listener
-    if (host) {
-      var client = new e131.Client(host);
-      var packet = client.createPacket(3 * device.pixels.length);
-      packet.setSourceName("BYOP");
-      packet.setUniverse(0x01);
-
-      this.e131Cache[id] = [client, packet];
-    }
+    this.pixelListener.newDevice(id, host, device.pixels.length);
   }
 
   updatePixelColors() {
     const timestamp = performance.now();
 
-    if (this.dmxData == null) {
-      this.visualiserDataBuffer.source = "demo-api";
-    } else {
-      if (this.dmxData.source.trim() === "BYOP-demo-dmx") {
-        this.visualiserDataBuffer.source = "demo-dmx";
-      } else {
-        this.visualiserDataBuffer.source = "dmx";
-      }
-    }
+    this.pixelListener.startedUpdatingDevices(this.colorSource.getSource());
 
     for (const [deviceId, device] of Object.entries(this.devices)) {
       for (const [pixelIndex, pixel] of Object.entries(device.pixels)) {
         var r, g, b;
 
-        const t = (Date.now() % 5000) / 5000;
+        const c = this.colorSource.calculate(
+          timestamp,
+          pixel,
+          deviceId,
+          pixelIndex
+        );
+        r = c.r;
+        g = c.g;
+        b = c.b;
 
-        if (this.dmxData == null) {
-          const c = spatialRainbow(timestamp, pixel, deviceId, pixelIndex);
-          r = c.r;
-          g = c.g;
-          b = c.b;
-
-          // if (deviceId == 2 && (t * 1000) % 5 == 1) {
-          //   console.log(
-          //     "localData",
-          //     deviceId,
-          //     pixelIndex,
-          //     phase,
-          //     t,
-          //     gX,
-          //     gY,
-          //     lX,
-          //     lY,
-          //     localWeight,
-          //     h,
-          //     s,
-          //     l,
-          //     r,
-          //     g,
-          //     b
-          //   );
-          // }
-        } else {
-          const localWeight = 0.2;
-
-          // find pixel's effective normalised world coordinates.
-          // Note that the local position is exagerated to show local interest instead of accurate mapping
-          const nX = (pixel.gX + localWeight * pixel.lX) % 1;
-          const nY = (pixel.gY + localWeight * pixel.lY) % 1;
-
-          const inputWidth = this.dmxData.length - 1;
-          const inputHeight = this.dmxData[0].length - 1;
-          const inputNW =
-            this.dmxData[Math.floor(nX * inputWidth)][
-              Math.ceil(nY * inputHeight)
-            ];
-          const inputNE =
-            this.dmxData[Math.ceil(nX * inputWidth)][
-              Math.ceil(nY * inputHeight)
-            ];
-          const inputSE =
-            this.dmxData[Math.ceil(nX * inputWidth)][
-              Math.floor(nY * inputHeight)
-            ];
-          const inputSW =
-            this.dmxData[Math.floor(nX * inputWidth)][
-              Math.floor(nY * inputHeight)
-            ];
-
-          r = interpolate(
-            inputNW[0],
-            inputNE[0],
-            inputSE[0],
-            inputSW[0],
-            (nX * inputWidth) % 1,
-            (nY * inputHeight) % 1
-          );
-          g = interpolate(
-            inputNW[1],
-            inputNE[1],
-            inputSE[1],
-            inputSW[1],
-            (nX * inputWidth) % 1,
-            (nY * inputHeight) % 1
-          );
-          b = interpolate(
-            inputNW[2],
-            inputNE[2],
-            inputSE[2],
-            inputSW[2],
-            (nX * inputWidth) % 1,
-            (nY * inputHeight) % 1
-          );
-
-          //   if (deviceId == 2 && (t * 1000) % 5 == 1) {
-          //     console.log(
-          //       "dmx",
-          //       deviceId,
-          //       pixelIndex,
-          //       pixel.gX,
-          //       pixel.gY,
-          //       pixel.lX,
-          //       pixel.lY,
-          //       nX,
-          //       nY,
-          //       inputNW,
-          //       inputNE,
-          //       inputSE,
-          //       inputSW,
-          //       localWeight,
-          //       r,
-          //       g,
-          //       b
-          //     );
-          //   }
-        }
-
-        //publish to visualiser / sACN
-        if (deviceId in this.e131Cache) {
-          const [_, packet] = this.e131Cache[deviceId];
-          const slotsData = packet.getSlotsData();
-
-          slotsData[pixelIndex * 3] = r * 255;
-          slotsData[pixelIndex * 3 + 1] = g * 255;
-          slotsData[pixelIndex * 3 + 2] = b * 255;
-        }
-        if (!(deviceId in this.visualiserDataBuffer.devices)) {
-          this.visualiserDataBuffer.devices[deviceId] = {
-            x: device.x,
-            y: device.y,
-            minX: device.minX,
-            maxX: device.maxX,
-            minY: device.minY,
-            maxY: device.maxY,
-            pixels: {},
-          };
-        }
-        this.visualiserDataBuffer.devices[deviceId]["pixels"][pixelIndex] = {
-          x: pixel.x,
-          y: pixel.y,
+        this.pixelListener.updatePixelColor(
+          deviceId,
+          pixelIndex,
           r,
           g,
           b,
-        };
+          device,
+          pixel
+        );
       }
-      if (deviceId in this.e131Cache) {
-        const [client, packet] = this.e131Cache[deviceId];
-        client.send(packet);
-      }
+      this.pixelListener.finishedUpdatingDevice(deviceId);
     }
-
-    //swap the buffers to atomically update all the values.
-    const tmp = this.visualiserData;
-    this.visualiserData = this.visualiserDataBuffer;
-    this.visualiserDataBuffer = tmp;
-    // console.log(JSON.stringify(this.visualiserData));
+    this.pixelListener.finishedUpdatingDevices();
   }
 
   //TODO: factor out? and test
@@ -432,6 +290,7 @@ export class DeviceStore {
     if (responseJson.leds.count < device.pixels.length) {
       retval.push("fewer physical pixels configured in wled than in byop");
     }
+    //TODO: if there is 1 pixel in byop, and more than 1 in WLED, check wled is configured to receive e.131 correctly.
     if (responseJson.wifi.signal < 20) {
       retval.push("Poor wifi signal");
     }
@@ -493,7 +352,7 @@ export class DeviceStore {
 
     if (this.db != null) {
       this.nextId = await this.db.loadRegisteredDeviceData(
-        this.registerDevice0
+        this.registerDevice0.bind(this)
       );
     } else {
       this.nextId = 0;
@@ -517,15 +376,8 @@ export class DeviceStore {
       promises.push(this.db.shutdown());
     }
 
-    if (this.e131Server != null) {
-      promises.push(
-        new Promise((resolve, reject) => {
-          this.e131Server.on("close", () => {
-            resolve();
-          });
-        })
-      );
-      this.e131Server.close();
+    if (this.colorSource != null) {
+      promises.push(this.colorSource.shutdown());
     }
 
     if (this.statusUpdater != null) {
@@ -588,27 +440,3 @@ export class DeviceStore {
     throw new Error(`Couldn't parse pixels (${typeof pixels} - ${pixels})`);
   }
 }
-
-function interpolate(nw, ne, se, sw, nX, nY) {
-  //TODO: is this the best interpolation?
-  const w = nw * nY + sw * (1 - nY);
-  const e = ne * nY + se * (1 - nY);
-  return e * nX + w * (1 - nX);
-}
-
-const toRGB2dArray = (arr, width) =>
-  arr.reduce((rows, key, index) => {
-    if (index % (width * 3) == 0) {
-      //new row array
-      rows.push([[key]]);
-    } else if (index % 3 == 0) {
-      //new column array
-      rows[rows.length - 1].push([key]);
-    } else {
-      //add value to column
-      const row = rows[rows.length - 1];
-      const column = row[row.length - 1];
-      column.push(key);
-    }
-    return rows;
-  }, []);

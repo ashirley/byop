@@ -23,7 +23,7 @@ router.get("/devices", function (req, res, next) {
 });
 
 router.post("/devices/new", function (req, res, next) {
-  req.devices.registerDevice(
+  const newId = req.devices.registerDevice(
     req.body.x,
     req.body.y,
     req.body.host,
@@ -31,7 +31,7 @@ router.post("/devices/new", function (req, res, next) {
       req.body.drawnPixelLocations || req.body.pixelLocations || "[[0,0]]"
     )
   );
-  res.redirect("/devices");
+  res.redirect("/devices/" + newId);
 });
 
 router.get("/devices/new", function (req, res, next) {
@@ -47,9 +47,10 @@ router.get("/devices/new", function (req, res, next) {
   });
 });
 
-// router.get("/devices/:deviceId", function (req, res, next) {
-//   const id = req.params.deviceId;
-//   res.render("devices", { title: "Express" });
-// });
+router.get("/devices/:deviceId", function (req, res, next) {
+  const id = req.params.deviceId;
+  const device = req.devices.getDeviceById(id);
+  res.render("device", { device });
+});
 
 export default router;
