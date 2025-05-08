@@ -7,10 +7,18 @@ import { CompositePixelListener } from "../pixelListener/CompositePixelListener.
 
 export class DeviceStore {
   async init(dao = null, colorSourceIn = null, pixelListenerIn = null) {
-    this.minX = process.env.FIELD_MIN_X;
-    this.maxX = process.env.FIELD_MAX_X;
-    this.minY = process.env.FIELD_MIN_Y;
-    this.maxY = process.env.FIELD_MAX_Y;
+    this.minX = process.env.FIELD_MIN_X
+      ? Number(process.env.FIELD_MIN_X)
+      : null;
+    this.maxX = process.env.FIELD_MAX_X
+      ? Number(process.env.FIELD_MAX_X)
+      : null;
+    this.minY = process.env.FIELD_MIN_Y
+      ? Number(process.env.FIELD_MIN_Y)
+      : null;
+    this.maxY = process.env.FIELD_MAX_Y
+      ? Number(process.env.FIELD_MAX_Y)
+      : null;
 
     this.dynamicFieldSize = !(
       "FIELD_MIN_X" in process.env &&
@@ -138,11 +146,12 @@ export class DeviceStore {
       delete this.unregisteredDevices[host];
     }
 
-    const device = matchingUnregisteredDevice || { x, y, host };
+    const device = matchingUnregisteredDevice || {};
+    device.x = x;
+    device.y = y;
+    device.host = host;
     device.id = id;
     device.pixels = DeviceStore.parsePixels(pixels);
-
-    this.devices[id] = device;
 
     //calculate local min/max
     const allPixelX = device.pixels.map((p) => p.x);
@@ -192,6 +201,8 @@ export class DeviceStore {
       }
     }
 
+    this.devices[id] = device;
+
     this.pixelListener.newDevice(id, host, device.pixels.length);
   }
 
@@ -202,27 +213,31 @@ export class DeviceStore {
 
     for (const [deviceId, device] of Object.entries(this.devices)) {
       for (const [pixelIndex, pixel] of Object.entries(device.pixels)) {
-        var r, g, b;
+        try {
+          var r, g, b;
 
-        const c = this.colorSource.calculate(
-          timestamp,
-          pixel,
-          deviceId,
-          pixelIndex
-        );
-        r = c.r;
-        g = c.g;
-        b = c.b;
+          const c = this.colorSource.calculate(
+            timestamp,
+            pixel,
+            deviceId,
+            pixelIndex
+          );
+          r = c.r;
+          g = c.g;
+          b = c.b;
 
-        this.pixelListener.updatePixelColor(
-          deviceId,
-          pixelIndex,
-          r,
-          g,
-          b,
-          device,
-          pixel
-        );
+          this.pixelListener.updatePixelColor(
+            deviceId,
+            pixelIndex,
+            r,
+            g,
+            b,
+            device,
+            pixel
+          );
+        } catch (e) {
+          console.error("Couldn't update color for device " + deviceId, e);
+        }
       }
       this.pixelListener.finishedUpdatingDevice(deviceId);
     }
@@ -238,37 +253,7 @@ export class DeviceStore {
 
     for (const [deviceId, device] of Object.entries(this.devices)) {
       if (device.host != null) {
-        promises.push(
-          fetch("http://" + device.host + "/json/info")
-            .then((response) => {
-              return response.json();
-            })
-            .then((responseJson) => {
-              device.warningMessages = this.extractWarningMessages(
-                responseJson,
-                device
-              );
-              if (!device.up) {
-                //this was down but now seems to be responding so mark it as having come up now
-                device.lastUp = Date.now();
-              }
-              device.up = true;
-
-              console.log(
-                device.host,
-                device.warningMessages,
-                responseJson.ver,
-                responseJson.leds.count,
-                responseJson.live,
-                responseJson.wifi.signal
-              );
-            })
-            .catch(function (err) {
-              device.warningMessages = [];
-              device.up = false;
-              console.log("Unable to fetch -", err);
-            })
-        );
+        promises.push(this.updateSingleDeviceStatus(device));
       } else {
         device.warningMessages = [];
         device.up = false;
@@ -281,21 +266,187 @@ export class DeviceStore {
     console.timeEnd("updateDeviceStatus");
   }
 
-  extractWarningMessages(responseJson, device) {
+  async updateSingleDeviceStatus(device) {
+    try {
+      const infoResponse = await fetch("http://" + device.host + "/json/info");
+      const infoResponseJson = await infoResponse.json();
+      const cfgResponse = await fetch("http://" + device.host + "/json/cfg");
+      const cfgResponseJson = await cfgResponse.json();
+
+      device.warningMessages = this.extractWarningMessages(
+        infoResponseJson,
+        cfgResponseJson,
+        device
+      );
+      if (!device.up) {
+        //this was down but now seems to be responding so mark it as having come up now
+        device.lastUp = Date.now();
+      }
+      device.up = true;
+      console.log(
+        device.host,
+        device.warningMessages,
+        infoResponseJson.ver,
+        infoResponseJson.leds.count,
+        cfgResponseJson.hw.led.total,
+        infoResponseJson.live,
+        cfgResponseJson.if.live.dmx.mode,
+        infoResponseJson.wifi.signal
+      );
+    } catch (err) {
+      device.warningMessages = [];
+      device.up = false;
+      console.log("Unable to fetch -", err);
+    }
+  }
+
+  extractWarningMessages(infoResponseJson, cfgResponseJson, device) {
     const retval = [];
 
-    if (!responseJson.live) {
-      retval.push("Not receiving/accepting e.131 stream");
+    if (!infoResponseJson.live) {
+      retval.push({
+        fixId: "liveMode",
+        description: "Not receiving/accepting e1.31 stream",
+      });
     }
-    if (responseJson.leds.count < device.pixels.length) {
-      retval.push("fewer physical pixels configured in wled than in byop");
+    if (device.pixels.length > 1) {
+      if (infoResponseJson.leds.count !== device.pixels.length) {
+        //TODO: fixes for both wled and byop for these?
+        if (cfgResponseJson.hw.led.ins.length === 1) {
+          retval.push({
+            fixId: "wledPixelCount",
+            description:
+              "incorrect number of physical pixels configured in wled compared to byop",
+          });
+        } else {
+          retval.push({
+            description:
+              "incorrect number of physical pixels configured in wled (over multiple inputs) compared to byop",
+          });
+        }
+      }
+      if (
+        cfgResponseJson.if.live.dmx.mode !== 4 /* dmx mode is not "Multi RGB" */
+      ) {
+        retval.push({
+          fixId: "liveMode",
+          description:
+            "WLED's dmx mode is not \"Multi RGB\" which is what we'll be sending",
+        });
+      }
+    } else {
+      //if there is 1 pixel in byop, and more than 1 in WLED, check wled is configured to receive e1.31 correctly.
+      if (
+        infoResponseJson.leds.count > 1 &&
+        cfgResponseJson.if.live.dmx.mode !==
+          1 /* dmx mode is not "Single RGB" */
+      ) {
+        retval.push({
+          fixId: "liveMode",
+          description:
+            "WLED's dmx mode is not \"Single RGB\" which is what we'll be sending",
+        });
+      }
     }
-    //TODO: if there is 1 pixel in byop, and more than 1 in WLED, check wled is configured to receive e.131 correctly.
-    if (responseJson.wifi.signal < 20) {
-      retval.push("Poor wifi signal");
+
+    if (cfgResponseJson.if.live.en !== true) {
+      retval.push({
+        fixId: "liveMode",
+        description: "WLED's Receive UDP Realtime is not enabled",
+      });
+    }
+
+    if (cfgResponseJson.if.live.port !== 5568) {
+      retval.push({
+        fixId: "liveMode",
+        description:
+          "WLED's Receive UDP Realtime is not on the expected port (i.e. E1.31",
+      });
+    }
+
+    if (infoResponseJson.wifi.signal < 20) {
+      retval.push({ description: "Poor wifi signal" });
     }
 
     return retval;
+  }
+
+  async fixLiveMode(deviceId) {
+    const device = this.devices[deviceId];
+
+    // 1 = Single RGB, 4 = Multi RGB
+    const desiredMode = device.pixels.length == 1 ? 1 : 4;
+
+    if (device.host != null) {
+      const response = await fetch("http://" + device.host + "/json/cfg", {
+        method: "POST",
+        body: JSON.stringify({
+          if: {
+            live: {
+              en: true,
+              mso: false,
+              port: 5568,
+              dmx: { mode: desiredMode },
+            },
+          },
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      const responseJson = await response.json();
+
+      //{"success":true}
+      if (responseJson.success !== true) {
+        throw new Error(
+          "Got unexpected JSON response from WLED: " +
+            JSON.stringify(responseJson)
+        );
+      }
+
+      await this.updateSingleDeviceStatus(this.devices[deviceId]);
+    } else {
+      return Promise.reject(new Error("No hostname associated with device"));
+    }
+  }
+
+  async fixWledPixelCount(deviceId) {
+    const device = this.devices[deviceId];
+
+    if (device.host != null) {
+      const cfgResponse = await fetch("http://" + device.host + "/json/cfg");
+      const cfgResponseJson = await cfgResponse.json();
+      if (cfgResponseJson.hw.led.ins.length !== 1) {
+        throw new Error(
+          "Can't adjust led count in wled when there are multiple inputs"
+        );
+      } else {
+        const desiredPin = cfgResponseJson.hw.led.ins[0].pin;
+        const desiredPixelCount = device.pixels.length;
+
+        const response = await fetch("http://" + device.host + "/json/cfg", {
+          method: "POST",
+          body: JSON.stringify({
+            hw: {
+              led: { ins: [{ pin: desiredPin, len: desiredPixelCount }] },
+            },
+          }),
+        });
+        const responseJson = await response.json();
+
+        //{"success":true}
+        if (responseJson.success !== true) {
+          throw new Error(
+            "Got unexpected JSON response from WLED: " +
+              JSON.stringify(responseJson)
+          );
+        }
+
+        await this.updateSingleDeviceStatus(this.devices[deviceId]);
+      }
+    } else {
+      return Promise.reject(new Error("No hostname associated with device"));
+    }
   }
 
   markDeviceUp(host) {

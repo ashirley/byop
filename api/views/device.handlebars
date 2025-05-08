@@ -2,7 +2,12 @@
 <div>
   <ul>
     <li>id: {{ device.id }}</li>
-    <li>status: {{ device.up }} {{ device.warningMessages }}</li>
+    <li>status: <span class="statusIcon {{#if device.up}}statusIcon--up{{else}}statusIcon--down{{/if}}"></span>{{#if device.up}}{{else}}<span> Last Up: {{formatDate device.lastUp}}</span>{{/if}}</li>
+    {{#if device.warningMessages }}<li>warnings: 
+      <ul>{{#each device.warningMessages }}
+        <li>{{ description }} {{#if fixId}} <a href="./{{../device.id}}/fix?fixId={{fixId}}">Fix</a> {{/if}}</li>
+      {{/each}}</ul>
+    {{/if}}
     <li>location: ({{ device.x }}, {{ device.y }})</li>
     <li>host: {{ device.host }}</li>
     <li>pixelCount: {{ device.pixels.length }}</li>

@@ -32,16 +32,21 @@ export class SqliteDao {
       this.db.serialize(() => {
         //TODO: error handling
 
+        var maxId = 0;
+
         this.db.each(
           "SELECT * from device",
           (err, row) => {
             console.debug("Loading device " + row.id + " from database");
             //TODO: should this JSON.parse be here or in Device.parsePixels?
             cb(row.id, row.x, row.y, row.host, JSON.parse(row.pixels));
+            if (row.id > maxId) {
+              maxId = row.id;
+            }
           },
           (err, count) => {
             //TODO: nextId
-            const nextId = 0;
+            const nextId = maxId + 1;
 
             console.log("Loaded " + count + " devices from database");
 
