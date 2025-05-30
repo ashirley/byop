@@ -77,8 +77,12 @@ export function sampleDevices() {
   };
 }
 
-function createPixel(d = 375, x = 0, y = 0, z = 0) {
-  return { d, x, y, z };
+function createPixel(d, x, y, z, setLocalCoords = false) {
+  if (setLocalCoords) {
+    return { d, x, y, z, lX: x, lY: y, lZ: z };
+  } else {
+    return { d, x, y, z };
+  }
 }
 
 function createTentDevice(x, y) {
@@ -114,11 +118,26 @@ function createTentDevice(x, y) {
     24: createPixel(s, 0, 3000, 0),
   };
 
+  calculateLocalCoords(pixels);
+
   return { pixels, x, y, minX: 0, maxX: 3000, minY: 0, maxY: 3000 };
 }
 
+function calculateLocalCoords(pixels) {
+  const allPixelX = Object.values(pixels).map((p) => p.x);
+  const allPixelY = Object.values(pixels).map((p) => p.y);
+  const minX = Math.min(...allPixelX);
+  const maxX = Math.max(...allPixelX);
+  const minY = Math.min(...allPixelY);
+  const maxY = Math.max(...allPixelY);
+  for (const [pixelIndex, pixel] of Object.entries(pixels)) {
+    pixel.lX = maxX === minX ? 0.5 : (pixel.x - minX) / (maxX - minX);
+    pixel.lY = maxY === minY ? 0.5 : (pixel.y - minY) / (maxY - minY);
+  }
+}
+
 function createSinglePixelDevice(x, y) {
-  const pixels = { 0: createPixel(375, 0, 0, 0) };
+  const pixels = { 0: createPixel(375, 0, 0, 0, true) };
   return { pixels, x, y };
 }
 

@@ -1,6 +1,6 @@
 <div>
   <ul>
-    <li>id: <a href="/devices/{{ id }}">{{ id }}</a></li>
+    <li>id: <a href="/devices/{{ id }}">{{ id }}</a> (<a href="/devices/{{ id }}/edit">edit</a>)</li>
     <li>status: <span class="statusIcon {{#if up}}statusIcon--up{{else}}statusIcon--down{{/if}}"></span>{{#if up}}{{else}}<span> Last Up: {{formatDate lastUp}}</span>{{/if}}</li>
     {{#if warningMessages }}<li>warnings: 
       <ul>{{#each warningMessages }}

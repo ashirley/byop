@@ -23,8 +23,8 @@ export class VisualiserPixelListener {
       };
     }
     this.visualiserDataBuffer.devices[deviceId]["pixels"][pixelIndex] = {
-      x: pixel.x,
-      y: pixel.y,
+      lX: pixel.lX,
+      lY: pixel.lY,
       r,
       g,
       b,

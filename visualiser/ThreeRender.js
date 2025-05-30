@@ -7,6 +7,12 @@ import {
   // @ts-ignore
 } from "lit";
 
+const PIXEL_SIZE_GROUP = 1; // 175
+const PIXEL_SIZE_SINGLE = 3; // 375
+const FLOOR_HEIGHT = -1; // -500
+const DEVICE_SIZE_X = 20;
+const DEVICE_SIZE_Y = 20;
+
 //https://stackoverflow.com/a/45046955/6950
 function resizeCanvasToDisplaySize(renderer, camera) {
   const canvas = renderer.domElement;
@@ -46,14 +52,15 @@ export class ThreeRender extends LitElement {
   }
 
   firstUpdated() {
-    //TODO: make this data driven
-    const fieldMinX = 0;
-    const fieldMaxX = 550000;
-    const fieldMinY = 0;
-    const fieldMaxY = 250000;
+    const fieldMinX = Math.min(...Object.values(this.devices).map((d) => d.x));
+    const fieldMaxX = Math.max(...Object.values(this.devices).map((d) => d.x));
+    const fieldMinY = Math.min(...Object.values(this.devices).map((d) => d.y));
+    const fieldMaxY = Math.max(...Object.values(this.devices).map((d) => d.y));
 
     const scene = new THREE.Scene();
     const group = new THREE.Group();
+    group.translateX(-1 * fieldMinX);
+    group.translateY(-1 * fieldMinY);
     scene.add(group);
     const renderer = new THREE.WebGLRenderer({
       canvas: this.renderRoot.getElementById("threeCanvas"),
@@ -61,12 +68,12 @@ export class ThreeRender extends LitElement {
     renderer.setPixelRatio(window.devicePixelRatio);
 
     //Add all the pixels
-    this.createAndAddDevices(this.devices, scene);
+    this.createAndAddDevices(this.devices, group);
 
     //ground plane
     const planeGeometry = new THREE.PlaneGeometry(
-      fieldMaxX - fieldMinX,
-      fieldMaxY - fieldMinY
+      fieldMaxX - fieldMinX + 2 * DEVICE_SIZE_X,
+      fieldMaxY - fieldMinY + 2 * DEVICE_SIZE_Y
     );
     const PlaneMaterial = new THREE.MeshBasicMaterial({
       color: 0x008800,
@@ -79,12 +86,12 @@ export class ThreeRender extends LitElement {
     const plane = new THREE.Mesh(planeGeometry, PlaneMaterial);
     plane.translateX((fieldMaxX - fieldMinX) / 2);
     plane.translateY((fieldMaxY - fieldMinY) / 2);
-    plane.translateZ(-500);
+    plane.translateZ(FLOOR_HEIGHT);
     plane.renderOrder = -999;
     scene.add(plane);
 
     // const axesHelper = new THREE.AxesHelper(500);
-    // group.add(axesHelper);
+    // scene.add(axesHelper);
 
     // const box = new THREE.BoxHelper(mesh, 0xffff00);
     // group.add(box);
@@ -101,7 +108,8 @@ export class ThreeRender extends LitElement {
     camera.up.set(0, 0, 1);
     // camera.position.x = fieldMaxX / 2;
     // camera.position.y = fieldMaxY / 2;
-    camera.position.z = 125000;
+    camera.position.z =
+      Math.max(fieldMaxX - fieldMinX, fieldMaxY - fieldMinY) / 4;
     // camera.translateX(-750);
     // camera.translateY(-150);
     // console.log(bbMin.x - bbc.x, bbMin.y - bbc.y);
@@ -110,8 +118,8 @@ export class ThreeRender extends LitElement {
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.target = new THREE.Vector3(
-      (fieldMaxX - fieldMinX) / 4 + fieldMinX,
-      (fieldMaxY - fieldMinY) / 4 + fieldMinY,
+      (fieldMaxX - fieldMinX) / 4,
+      (fieldMaxY - fieldMinY) / 4,
       0
     );
 
@@ -134,25 +142,29 @@ export class ThreeRender extends LitElement {
 
   updateColors() {
     for (const [deviceId, device] of Object.entries(this.devices)) {
-      for (const [pixelId, p] of Object.entries(device.pixels)) {
-        if ("r" in p) {
-          this.pixelShapes[deviceId][pixelId].material.color.setRGB(
-            p.r,
-            p.g,
-            p.b
-          );
-        } else {
-          this.pixelShapes[deviceId][pixelId].material.color.setHSL(
-            p.h,
-            p.s,
-            p.l
-          );
+      if (this.pixelShapes[deviceId]) {
+        for (const [pixelId, p] of Object.entries(device.pixels)) {
+          if (this.pixelShapes[deviceId][pixelId]) {
+            if ("r" in p) {
+              this.pixelShapes[deviceId][pixelId].material.color.setRGB(
+                p.r,
+                p.g,
+                p.b
+              );
+            } else {
+              this.pixelShapes[deviceId][pixelId].material.color.setHSL(
+                p.h,
+                p.s,
+                p.l
+              );
+            }
+          }
         }
       }
     }
   }
 
-  createPixel(d = 375, x = 0, y = 0, z = 0) {
+  createPixel(d = 1, x = 0, y = 0, z = 0) {
     const geometry = new THREE.SphereGeometry(d, 32, 16);
     const material = new THREE.MeshBasicMaterial({ color: 0xffffff });
     const sphere = new THREE.Mesh(geometry, material);
@@ -172,25 +184,19 @@ export class ThreeRender extends LitElement {
     scene.add(group);
 
     const defaultPixelSize =
-      Object.entries(device.pixels).length > 1 ? 175 : 375;
+      Object.entries(device.pixels).length > 1
+        ? PIXEL_SIZE_GROUP
+        : PIXEL_SIZE_SINGLE;
     for (const [pixelId, pixel] of Object.entries(device.pixels)) {
       const shape = this.createPixel(
         pixel.d || defaultPixelSize,
-        pixel.x,
-        pixel.y,
-        pixel.z || 250
+        (pixel.lX - 0.5) * DEVICE_SIZE_X,
+        (pixel.lY - 0.5) * DEVICE_SIZE_Y,
+        pixel.lZ || 0
       );
       this.pixelShapes[id][pixelId] = shape;
       group.add(shape);
     }
-
-    //translate so device coordinates are center of device?
-    group.translateX(
-      device.minX === device.maxX ? 0 : (-1 * (device.maxX + device.minX)) / 2
-    );
-    group.translateY(
-      device.minY === device.maxY ? 0 : (-1 * (device.maxY + device.minY)) / 2
-    );
   }
 
   createAndAddDevices(devices, scene) {
