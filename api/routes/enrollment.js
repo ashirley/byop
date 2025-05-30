@@ -58,22 +58,35 @@ router.get("/devices/:deviceId/fix", function (req, res, next) {
   const fixId = req.query.fixId;
   const device = req.devices.getDeviceById(deviceId);
 
-  var fixDescription;
-  var errorMessage;
-  switch (fixId) {
-    case "liveMode":
-      fixDescription = "Change live mode settings to match BYOP expectations";
-      break;
-    case "wledPixelCount":
-      fixDescription = "Change wled pixel output settings";
-      break;
-    default:
-      errorMessage = "Unknown fix, nothing could be changed";
+  if (fixId === "byopPixelCount") {
+    //This doesn't require confirmation (as you it does nothing until you press save on the next screen) so shortcut
+    if (req.query.fixData != null) {
+      res.redirect(`/devices/${deviceId}/edit?pixelCount=${req.query.fixData}`);
+      return;
+    } else {
+      errorMessage =
+        "Error applying byopPixelCount fix: target pixelCount must be supplied as a 'fixData' query parameter";
+    }
   }
+
+  var fixDescription = {
+    liveMode: "Change live mode settings to match BYOP expectations",
+    wledPixelCount: "Change wled pixel output settings",
+    byopPixelCount:
+      "Edit the device in BYOP to match the pixel count from wled",
+    wledPixelCountAndMode: "Change wled pixel output and live mode settings",
+    byopPixelCountAndMode:
+      "Edit the device in BYOP to match the pixel count from wled but chnage the wled live mode setting too",
+  }[fixId];
+
+  var errorMessage =
+    fixDescription == undefined
+      ? "Unknown fix, nothing could be changed"
+      : null;
 
   res.render("deviceFix", {
     device,
-    fix: { id: fixId, description: fixDescription },
+    fix: { id: fixId, description: fixDescription, fixData: req.query.fixData },
     errorMessage,
   });
 });
@@ -99,6 +112,10 @@ router.post("/devices/:deviceId/fix", async function (req, res, next) {
         errorMessage = "Error applying wledPixelCount fix: " + e;
       }
       break;
+    case "wledPixelCountAndMode":
+    //TODO
+    case "byopPixelCountAndMode":
+    //TODO
     default:
       errorMessage = "Unknown fix, nothing could be changed";
   }
@@ -112,6 +129,34 @@ router.post("/devices/:deviceId/fix", async function (req, res, next) {
   } else {
     res.redirect("/devices/" + deviceId);
   }
+});
+
+router.get("/devices/:deviceId/edit", function (req, res, next) {
+  const id = req.params.deviceId;
+  const device = req.devices.getDeviceById(id);
+
+  res.render("newdevice", {
+    existing: {
+      x: device.x,
+      y: device.y,
+      host: device.host,
+      pixelCount: req.query.pixelCount || device.pixels.length,
+      multiplePixels: (req.query.pixelCount || device.pixels.length) > 1,
+      pixelJSON: JSON.stringify(device.pixels.map((d) => ({ x: d.x, y: d.y }))),
+    },
+  });
+});
+
+router.post("/devices/:deviceId/edit", function (req, res, next) {
+  req.devices.updateDevice(
+    req.params.deviceId,
+    Number(req.body.x),
+    Number(req.body.y),
+    JSON.parse(
+      req.body.drawnPixelLocations || req.body.pixelLocations || "[[0,0]]"
+    )
+  );
+  res.redirect("/devices/" + req.params.deviceId);
 });
 
 export default router;

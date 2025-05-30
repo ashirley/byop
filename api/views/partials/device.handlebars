@@ -1,0 +1,14 @@
+<div>
+  <ul>
+    <li>id: <a href="/devices/{{ id }}">{{ id }}</a></li>
+    <li>status: <span class="statusIcon {{#if up}}statusIcon--up{{else}}statusIcon--down{{/if}}"></span>{{#if up}}{{else}}<span> Last Up: {{formatDate lastUp}}</span>{{/if}}</li>
+    {{#if warningMessages }}<li>warnings: 
+      <ul>{{#each warningMessages }}
+        <li>{{ description }} {{#if fixId}} <a href="./{{../id}}/fix?fixId={{fixId}}{{#if fixData}}&fixData={{fixData}}{{/if}}">Fix</a> {{/if}}</li>
+      {{/each}}</ul>
+    {{/if}}
+    <li>location: ({{ x }}, {{ y }})</li>
+    <li>host: {{ host }}</li>
+    <li>pixelCount: {{ pixels.length }}</li>
+  </ul>
+</div>

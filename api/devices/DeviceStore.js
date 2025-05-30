@@ -69,10 +69,6 @@ export class DeviceStore {
     }
     this.statusUpdateCount = 0;
     await this.updateDeviceStatus();
-
-    this.statusUpdater = setInterval(() => {
-      this.updateDeviceStatus();
-    }, 5000); //poll devices for their status every 5s
   }
 
   getRegisteredDevices() {
@@ -96,6 +92,10 @@ export class DeviceStore {
     return id;
   }
 
+  updateDevice(id, x, y, pixels) {
+    this.registerDevice0(id, x, y, this.devices[id].host, pixels);
+    this.saveDeviceData(id);
+  }
   /**
    * Add the device as a registered device without saving to the DB. Used internally.
    * @param {*} id
@@ -264,6 +264,10 @@ export class DeviceStore {
 
     this.statusUpdateCount++;
     console.timeEnd("updateDeviceStatus");
+
+    this.statusUpdater = setTimeout(() => {
+      this.updateDeviceStatus();
+    }, 60_000); //poll devices for their status in another 60s
   }
 
   async updateSingleDeviceStatus(device) {
@@ -283,16 +287,16 @@ export class DeviceStore {
         device.lastUp = Date.now();
       }
       device.up = true;
-      console.log(
-        device.host,
-        device.warningMessages,
-        infoResponseJson.ver,
-        infoResponseJson.leds.count,
-        cfgResponseJson.hw.led.total,
-        infoResponseJson.live,
-        cfgResponseJson.if.live.dmx.mode,
-        infoResponseJson.wifi.signal
-      );
+      // console.log(
+      //   device.host,
+      //   device.warningMessages,
+      //   infoResponseJson.ver,
+      //   infoResponseJson.leds.count,
+      //   cfgResponseJson.hw.led.total,
+      //   infoResponseJson.live,
+      //   cfgResponseJson.if.live.dmx.mode,
+      //   infoResponseJson.wifi.signal
+      // );
     } catch (err) {
       device.warningMessages = [];
       device.up = false;
@@ -309,43 +313,143 @@ export class DeviceStore {
         description: "Not receiving/accepting e1.31 stream",
       });
     }
-    if (device.pixels.length > 1) {
-      if (infoResponseJson.leds.count !== device.pixels.length) {
-        //TODO: fixes for both wled and byop for these?
-        if (cfgResponseJson.hw.led.ins.length === 1) {
+
+    /*
+    |  wled  |  byop  | wled mode | result
+    | pixels | pixels |           |
+    --------------------------------------
+    |        |        |           |
+    | 1      | 1      | single    | good
+    | 1      | 1      | multiple  | fine
+    | 1      | 1      | other     | error - fix wled mode
+    | 1      | n      | single    | error - fix byop pixelCount (or wled pixelCount + mode)
+    | 1      | n      | multiple  | error - fix wled pixelCount (or byop pixelCount)
+    | 1      | n      | other     | error - fix wled pixelCount + mode
+    | n      | 1      | single    | good
+    | n      | 1      | multiple  | error - fix byop pixelCount (or wled mode)
+    | n      | 1      | other     | error - fix wled mode
+    | n      | n      | single    | error - fix wled mode
+    | n      | n      | multiple  | good
+    | n      | n      | other     | error - fix wled mode
+    | n      | != n   | single    | error - fix wled mode + fix wled pixelCount (or byop pixelCount)
+    | n      | != n   | multiple  | error - fix byop pixelCount (or wled pixelCount)
+    | n      | != n   | other     | error - fix wled mode + fix wled pixelCount (or byop pixelCount)
+    */
+
+    const wledPixels = infoResponseJson.leds.count;
+    const byopPixels = device.pixels.length;
+    const wledMode = cfgResponseJson.if.live.dmx.mode;
+    const SINGLE = 1;
+    const MULTIPLE = 4;
+
+    if (wledPixels === 1) {
+      if (byopPixels === 1) {
+        if (wledMode !== SINGLE && wledMode !== MULTIPLE) {
           retval.push({
-            fixId: "wledPixelCount",
+            fixId: "liveMode",
             description:
-              "incorrect number of physical pixels configured in wled compared to byop",
+              "WLED's dmx mode is not \"Single RGB\" which is what we'll be sending",
           });
-        } else {
+        }
+      } /* (byopPixels !== 1) */ else {
+        if (wledMode === SINGLE) {
           retval.push({
-            description:
-              "incorrect number of physical pixels configured in wled (over multiple inputs) compared to byop",
+            fixId: "byopPixelCount",
+            fixData: wledPixels,
+            description: `Incorrect number of pixels configured in BYOP (${byopPixels}) compared to 1 physical pixel in WLED`,
+          });
+          retval.push({
+            fixId: "wledPixelCountAndMode",
+            description: `Incorrect number of physical pixels configured in wled (${wledPixels}, and it has "Single RGB" dmx mode) compared to byop (${byopPixels})`,
+          });
+        } else if (wledMode === MULTIPLE) {
+          retval.push({
+            fixId: "wledPixelCountAndMode",
+            description: `Incorrect number of physical pixels configured in wled (${wledPixels}, and it has "Multiple RGB" dmx mode) compared to byop (${byopPixels})`,
+          });
+          retval.push({
+            fixId: "byopPixelCount",
+            fixData: wledPixels,
+            description: `Incorrect number of pixels configured in BYOP (${byopPixels}) compared to 1 physical pixel in WLED`,
+          });
+        } /* (wledMode === OTHER) */ else {
+          retval.push({
+            fixId: "wledPixelCountAndMode",
+            description: `Incorrect number of physical pixels configured in wled (${wledPixels}, and it has an unsupported dmx mode) compared to byop (${byopPixels})`,
           });
         }
       }
-      if (
-        cfgResponseJson.if.live.dmx.mode !== 4 /* dmx mode is not "Multi RGB" */
-      ) {
+    } /*(wledPixels !== 1)*/ else {
+      if (byopPixels === 1) {
+        if (wledMode === MULTIPLE) {
+          retval.push({
+            fixId: "byopPixelCount",
+            fixData: wledPixels,
+            description: `Incorrect number of pixels configured in BYOP (${byopPixels}) compared to 1 physical pixel in WLED`,
+          });
         retval.push({
           fixId: "liveMode",
           description:
-            "WLED's dmx mode is not \"Multi RGB\" which is what we'll be sending",
+              "WLED's dmx mode is not \"Single RGB\" which is what we'll be sending",
         });
-      }
-    } else {
-      //if there is 1 pixel in byop, and more than 1 in WLED, check wled is configured to receive e1.31 correctly.
-      if (
-        infoResponseJson.leds.count > 1 &&
-        cfgResponseJson.if.live.dmx.mode !==
-          1 /* dmx mode is not "Single RGB" */
-      ) {
+        } /* (wledMode === OTHER) */ else {
         retval.push({
           fixId: "liveMode",
           description:
             "WLED's dmx mode is not \"Single RGB\" which is what we'll be sending",
         });
+        }
+      } /* (byopPixels !== 1) */ else {
+        //both have multiple pixels
+        if (byopPixels === wledPixels) {
+          if (wledMode === SINGLE) {
+            retval.push({
+              fixId: "liveMode",
+              description:
+                "WLED's dmx mode is not \"Multi RGB\" which is what we'll be sending",
+            });
+          } else if (wledMode === MULTIPLE) {
+            //good
+          } /* (wledMode === OTHER) */ else {
+            retval.push({
+              fixId: "liveMode",
+              description:
+                "WLED's dmx mode is not \"Multi RGB\" which is what we'll be sending",
+            });
+          }
+        } /* (byopPixels === wledPixels) */ else {
+          if (wledMode === SINGLE) {
+            retval.push({
+              fixId: "wledPixelCountAndMode",
+              description: `Incorrect number of physical pixels configured in wled (${wledPixels}, and it has "Single RGB" dmx mode) compared to byop (${byopPixels})`,
+            });
+            retval.push({
+              fixId: "byopPixelCountAndMode",
+              fixData: wledPixels,
+              description: `Incorrect number of pixels configured in BYOP (${byopPixels}) compared to physical pixels in WLED (${wledPixels}, and it has "Single RGB" dmx mode)`,
+            });
+          } else if (wledMode === MULTIPLE) {
+            retval.push({
+              fixId: "byopPixelCount",
+              fixData: wledPixels,
+              description: `Incorrect number of pixels configured in BYOP (${byopPixels}) compared to physical pixels in WLED (${wledPixels})`,
+            });
+            retval.push({
+              fixId: "wledPixelCount",
+              description: `Incorrect number of physical pixels configured in wled (${wledPixels}) compared to byop (${byopPixels})`,
+            });
+          } /* (wledMode === OTHER) */ else {
+            retval.push({
+              fixId: "wledPixelCountAndMode",
+              description: `Incorrect number of physical pixels configured in wled (${wledPixels}, and it has an unsupported dmx mode) compared to byop (${byopPixels})`,
+            });
+            retval.push({
+              fixId: "byopPixelCountAndMode",
+              fixData: wledPixels,
+              description: `Incorrect number of pixels configured in BYOP (${byopPixels}) compared to physical pixels in WLED (${wledPixels}, and it has an unsupported dmx mode)`,
+            });
+          }
+        }
       }
     }
 
@@ -360,7 +464,7 @@ export class DeviceStore {
       retval.push({
         fixId: "liveMode",
         description:
-          "WLED's Receive UDP Realtime is not on the expected port (i.e. E1.31",
+          "WLED's Receive UDP Realtime is not on the expected port (i.e. E1.31)",
       });
     }
 

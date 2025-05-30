@@ -3,6 +3,13 @@
         const allSectionElements = document.getElementsByClassName("section-" + type);
         for (let i = 0; i < allSectionElements.length; i++) {
             allSectionElements[i].toggleAttribute("hidden", !visible)
+
+            if (visible && allSectionElements[i].tagName === "CANVAS") {
+                //when showing canvases, synthesize a resize event so paper3d adjusts
+                var resizeEvent = window.document.createEvent('UIEvents'); 
+                resizeEvent.initUIEvent('resize', true, false, window, 0); 
+                allSectionElements[i].dispatchEvent(resizeEvent);
+            }
         }
     }
 
@@ -27,7 +34,7 @@
     <form method="POST">
     {{!-- device identification --}}
 
-    <div data-initially-hidden class="newdevicesform__devicemode-select">
+    <div data-initially-hidden {{#if existing}}hidden {{/if}}class="newdevicesform__devicemode-select">
         <input type="radio" id="list" name="devicemode" value="list" checked onchange="onDeviceModeSelect('list')" />
         <label for="list">Select from list of discovered devices</label>
 
@@ -37,6 +44,11 @@
     
     {{!-- TODO: refresh this list / make it live, include more info to help choose like firstSeen and online status --}}
     <label class="newdevicesform__host-label section-list" for="host">IP Address</label>
+    {{#if existing}}
+    <div class="newdevicesform__host-input">
+        <input id="host" class="newdevicesform__host-input" type="text" name="host" readOnly value="{{existing.host}}"/>
+    </div>
+    {{else}}
     {{!-- Taken from https://www.w3.org/WAI/ARIA/apg/patterns/combobox/examples/combobox-autocomplete-list/ --}}
     <div class="combobox combobox-list section-list newdevicesform__host-input">
         <div class="group">
@@ -61,14 +73,15 @@
             {{/each}}
         </ul>
     </div>
+    {{/if}}
 
     <button type="button" class="newdevicesform__provision-button section-serial" onClick="window.startEnrollment(); return false;">Provision</button>
     <div class="newdevicesform__provision-message newdevicesform__provision-message--hidden"></div>
 
     {{!-- Location --}}
     <p class="newdevicesform__info">Device Location</p>
-    <label class="newdevicesform__x-label" for="x">X</label><input class="newdevicesform__x-input" id="x" name="x"/>
-    <label class="newdevicesform__y-label" for="y">Y</label><input class="newdevicesform__y-input" id="y" name="y"/>
+    <label class="newdevicesform__x-label" for="x">X</label><input class="newdevicesform__x-input" id="x" name="x" value="{{existing.x}}"/>
+    <label class="newdevicesform__y-label" for="y">Y</label><input class="newdevicesform__y-input" id="y" name="y" value="{{existing.y}}"/>
 
     {{!-- pixel layout --}}
     <p class="newdevicesform__info">The layout of individual pixels is used to give some local interest to the pattern.
@@ -91,12 +104,10 @@
     <div class="newdevicesform__info newdevicesform__info--single section-single">All pixels have the same colour. TODO: how to configure this in wled</div>
     
     <div class="newdevicesform__info newdevicesform__info--specified section-specified">Specify the location of the pixels. e.g. <pre>[[0,10],[50,5]]</pre>. TODO: how to configure this in wled</div>
-    {{!-- TODO: compare this to the pixel count reported by WLED and offer to change WLED to match --}}
-    <label class="newdevicesform__pixelLocations-label section-specified" for="pixelLocations">pixel locations</label><textarea class="newdevicesform__pixelLocations-input section-specified" id="pixelLocations" name="pixelLocations" rows="5"></textarea>
+    <label class="newdevicesform__pixelLocations-label section-specified" for="pixelLocations">pixel locations</label><textarea class="newdevicesform__pixelLocations-input section-specified" id="pixelLocations" name="pixelLocations" rows="5">{{existing.pixelJSON}}</textarea>
     
     <div class="newdevicesform__info newdevicesform__info--drawn section-drawn">Specify the number of pixels and draw the shape of their layout as seen from above. TODO: how to configure this in wled</div>
-    {{!-- TODO: initialise this to the pixel count reported by WLED and offer to change WLED to match if this changes --}}
-    <label class="newdevicesform__pixelCount-label section-drawn" for="pixelCount">pixel count</label><input class="newdevicesform__pixelCount-input section-drawn" id="pixelCount" name="pixelCount" type="number" value="50"/>
+    <label class="newdevicesform__pixelCount-label section-drawn" for="pixelCount">pixel count</label><input class="newdevicesform__pixelCount-input section-drawn" id="pixelCount" name="pixelCount" type="number" value="{{default existing.pixelCount 50}}"/>
     <script type="text/paperscript" canvas="pixelLocationsCanvas">
         //TODO: add a grid to align drawing
         //TOOD: add an edit/reset interface instead of expecting it to be perfect first time!
@@ -131,7 +142,7 @@
 
                 var pointsArr = []
 
-                var segmentCount=50 - 1;
+                var segmentCount=document.getElementById("pixelCount").value - 1;
                 for (var i = 0; i <= segmentCount; i++) {
                     var point = path.getPointAt(path.length * i / segmentCount);
                     var circle = new Path.Circle({
@@ -146,7 +157,7 @@
                 }
 
                 document.getElementById("drawnPixelLocations").value = JSON.stringify(pointsArr)
-                console.log(pointsArr);
+                {{!-- console.log(pointsArr); --}}
             }
         }
 
@@ -155,12 +166,16 @@
     <canvas id="pixelLocationsCanvas" resize class="section-drawn" data-initially-hidden></canvas>
     {{!-- TODO: make this a text area (and the one above) --}}
     {{!-- TODO: hide this? --}}
-    <label class="newdevicesform__drawnPixelLocations-label section-drawn" for="drawnPixelLocations" data-initially-hidden>pixel locations</label><textarea class="newdevicesform__drawnPixelLocations-input section-drawn" id="drawnPixelLocations" name="drawnPixelLocations" readOnly rows="5" data-initially-hidden></textarea>
+    <label class="newdevicesform__drawnPixelLocations-label section-drawn" for="drawnPixelLocations" data-initially-hidden>pixel locations</label><textarea class="newdevicesform__drawnPixelLocations-input section-drawn" id="drawnPixelLocations" name="drawnPixelLocations" readOnly rows="5" data-initially-hidden>{{existing.pixelJSON}}</textarea>
 
     <input type="submit"/>
     </form>
 </div>
 <script>
-    onModeSelect('single');
     onDeviceModeSelect('list');
+    {{#if existing.multiplePixels}}
+    onModeSelect('drawn');
+    {{else }}
+    onModeSelect('single');
+    {{/if}}
 </script>

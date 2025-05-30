@@ -7,4 +7,12 @@ Handlebars.registerHelper("formatDate", (timestamp) =>
   new Date(timestamp).toLocaleString()
 );
 
+Handlebars.registerHelper("default", (a, b) => {
+  if (!Handlebars.Utils.isEmpty(a)) {
+    return a;
+  } else {
+    return b;
+  }
+});
+
 export { engine };

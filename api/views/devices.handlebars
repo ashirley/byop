@@ -1,13 +1,5 @@
 <h1>Devices</h1>
 {{#each registeredDevices}}
-<div>
-  <ul>
-    <li>id: {{ id }}</li>
-    <li>status: {{ up }} {{ warningMessages }}</li>
-    <li>location: ({{ x }}, {{ y }})</li>
-    <li>host: {{ host }}</li>
-    <li>pixelCount: {{ pixels.length }}</li>
-  </ul>
-</div>
+{{> device }}
 {{/each}}
 <a href="/devices/new">Enroll new device...</a>
