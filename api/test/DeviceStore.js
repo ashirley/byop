@@ -60,6 +60,17 @@ describe("DeviceStore", function () {
       assert.equal(store.getRegisteredDevices()[0].up, true); // make sure this has been copied from the unregistered device record
     });
 
+    it("registered device cannot duplicate host", function () {
+      store.registerDevice(1, 2, "fooHost", [[1, 1]]);
+      assert.throws(
+        () => store.registerDevice(3, 4, "fooHost", [[1, 1]]),
+        /Duplicate host/
+      );
+
+      assert.equal(Object.keys(store.getRegisteredDevices()).length, 1);
+      assert.equal(store.getRegisteredDevices()[0].host, "fooHost");
+    });
+
     it("dynamic field starts as null", function () {
       assert.equal(store.minX, null);
       assert.equal(store.maxX, null);
@@ -215,7 +226,7 @@ describe("DeviceStore", function () {
   });
 
   describe("#markDeviceUp() / #markDeviceDown()", function () {
-    it("markDeviceUp should update existing record", function () {
+    it("markDeviceUp should update existing unregisteredDevices record", function () {
       store.markDeviceUp("barHost");
 
       //fudge these to a known (not-now) value so we can detect it has been updated
@@ -232,7 +243,16 @@ describe("DeviceStore", function () {
       assert.equal(store.getUnregisteredDevices()["barHost"].up, true);
     });
 
-    it("markDeviceDown should update existing record", function () {
+    it("markDeviceUp should consider existing registeredDevices record", function () {
+      const id = store.registerDevice(1, 2, "barHost", [[1, 1]]);
+
+      store.markDeviceUp("barHost");
+
+      //Don't track this, use a more pro-active mechanism once it is registered.
+      assert.equal(Object.keys(store.getUnregisteredDevices()).length, 0);
+    });
+
+    it("markDeviceDown should update existing unregisteredDevices record", function () {
       store.markDeviceUp("barHost");
 
       //fudge these to a known (not-now) value so we can detect it has been updated
@@ -245,6 +265,15 @@ describe("DeviceStore", function () {
       assert.equal(store.getUnregisteredDevices()["barHost"].firstSeen, 1);
       assert.equal(store.getUnregisteredDevices()["barHost"].lastUp, null);
       assert.equal(store.getUnregisteredDevices()["barHost"].up, false);
+    });
+
+    it("markDeviceDown should consider existing registeredDevices record", function () {
+      const id = store.registerDevice(1, 2, "barHost", [[1, 1]]);
+
+      store.markDeviceDown("barHost");
+
+      //Don't track this, use a more pro-active mechanism once it is registered.
+      assert.equal(Object.keys(store.getUnregisteredDevices()).length, 0);
     });
   });
 

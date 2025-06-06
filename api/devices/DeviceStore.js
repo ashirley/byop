@@ -105,6 +105,11 @@ export class DeviceStore {
    * @param {*} pixels
    */
   registerDevice0(id, x, y, host, pixels) {
+    if (Object.values(this.devices).find((x) => x.host === host)) {
+      // This host is already in use
+      throw new Error("Duplicate host");
+    }
+
     var globalLimitsChanged = false;
     if (this.dynamicFieldSize) {
       //update global min/max
@@ -564,12 +569,15 @@ export class DeviceStore {
         up: true,
       };
     } else {
+      // Is this already registered?
+      if (!Object.values(this.devices).find((x) => x.host === host)) {
       this.unregisteredDevices[host] = {
         host,
         firstSeen: Date.now(),
         lastUp: Date.now(),
         up: true,
       };
+      }
     }
   }
 
