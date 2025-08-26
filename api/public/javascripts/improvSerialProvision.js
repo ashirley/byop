@@ -21,6 +21,7 @@ async function connectAndGetInfo() {
     improv,
     isWLED: improv.info.firmware === "WLED",
     wledVersion: improv.info.version,
+    port,
   };
 }
 
@@ -43,44 +44,50 @@ export async function startEnrollment({ wifiSsid, wifiPassword }) {
     return;
   }
 
-  var improv, isWLED, wledVersion;
+  var improv, isWLED, wledVersion, port;
   try {
-    ({ improv, isWLED, wledVersion } = await connectAndGetInfo());
+    ({ improv, isWLED, wledVersion, port } = await connectAndGetInfo());
   } catch (e) {
     reportError("Error connecting to device", e);
     return;
   }
+  try {
+    if (!isWLED) {
+      reportError(
+        "serial device doesn't report that it is a WLED controller. Consider installing via https://install.wled.me/"
+      );
+      return;
+    }
 
-  if (!isWLED) {
-    reportError(
-      "serial device doesn't report that it is a WLED controller. Consider installing via https://install.wled.me/"
-    );
-    return;
-  }
+    console.log("Found WLED controller with firmware version " + wledVersion);
 
-  console.log("Found WLED controller with firmware version " + wledVersion);
+    if (!improv.nextUrl) {
+      //no existing network connection, provision wifi access
 
-  if (!improv.nextUrl) {
-    //no existing network connection, provision wifi access
+      await improv.provision(
+        wifiSsid,
+        wifiPassword,
+        30000 // Optional: Timeout in ms
+      );
+    }
 
-    await improv.provision(
-      wifiSsid,
-      wifiPassword,
-      30000 // Optional: Timeout in ms
-    );
-  }
+    if (!improv.nextUrl) {
+      reportError("Failed to provision wifi");
+    } else {
+      console.log("WLED controller has nextUrl " + improv.nextUrl);
 
-  if (!improv.nextUrl) {
-    reportError("Failed to provision wifi");
-  } else {
-    console.log("WLED controller has nextUrl " + improv.nextUrl);
+      const host = URL.parse(improv.nextUrl).host;
 
-    const host = URL.parse(improv.nextUrl).host;
+      console.log("WLED controller has host " + host);
 
-    console.log("WLED controller has host " + host);
+      // TODO: should we wait to see it on the server via bonjour?
+      // TODO: offer to change the hostname?
 
-    // TODO: just load this up on the main enrollment page or should we wait to see it on the server via bonjour?
-
-    // TODO: offer to change the hostname?
+      document.getElementById("list").click();
+      document.getElementById("host").value = host;
+    }
+  } finally {
+    await improv.close();
+    await port.close();
   }
 }
