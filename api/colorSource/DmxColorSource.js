@@ -15,7 +15,7 @@ export class DmxColorSource {
       const end = this.updateMetric.startTimer();
 
       //check we got as much as we were expecting.
-      if (data.length !== dmxRows * dmxColumns * 3) {
+      if (!(data.length === dmxRows * dmxColumns * 3 || data.length === 512)) {
         console.error(
           `recieved wrong amount of dmx data. Got ${
             data.length
@@ -26,7 +26,8 @@ export class DmxColorSource {
       }
       this.dmxData = toRGB2dArray(
         data.map((d) => d / 255),
-        dmxColumns
+        dmxColumns,
+        dmxRows
       );
 
       this.dmxData.source = source;
@@ -148,19 +149,21 @@ function interpolate(nw, ne, se, sw, nX, nY) {
  * 2nd of order width
  * 3rd of order 3
  */
-const toRGB2dArray = (arr, width) =>
+const toRGB2dArray = (arr, width, height) =>
   arr.reduce((rows, key, index) => {
-    if (index % (width * 3) == 0) {
-      //new row array
-      rows.push([[key]]);
-    } else if (index % 3 == 0) {
-      //new column array
-      rows[rows.length - 1].push([key]);
-    } else {
-      //add value to column
-      const row = rows[rows.length - 1];
-      const column = row[row.length - 1];
-      column.push(key);
+    if (index < width * height * 3) {
+      if (index % (width * 3) == 0) {
+        //new row array
+        rows.push([[key]]);
+      } else if (index % 3 == 0) {
+        //new column array
+        rows[rows.length - 1].push([key]);
+      } else {
+        //add value to column
+        const row = rows[rows.length - 1];
+        const column = row[row.length - 1];
+        column.push(key);
+      }
     }
     return rows;
   }, []);
