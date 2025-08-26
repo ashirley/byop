@@ -168,7 +168,10 @@ export class DeviceStore {
    * @param {*} pixels
    */
   registerDevice0(id, x, y, host, pixels) {
-    if (Object.values(this.devices).find((x) => x.host === host)) {
+    if (
+      host != null &&
+      Object.values(this.devices).find((x) => x.host === host && x.id != id)
+    ) {
       // This host is already in use
       throw new Error("Duplicate host");
     }
