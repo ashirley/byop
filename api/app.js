@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import logger from "morgan";
 import multer from "multer";
 import expressWsFn from "express-ws";
+import promClient from "prom-client";
 
 import enrollmentRouter from "./routes/enrollment.js";
 import visualiserRouterFn from "./routes/visualiser.js";
@@ -50,6 +51,11 @@ app.use(function (req, res, next) {
 app.use("/", enrollmentRouter);
 app.use("/visualiser", visualiserRouter);
 
+app.get("/metrics", (req, res) => {
+  res.set("Content-Type", promClient.register.contentType);
+  promClient.register.metrics().then((metrics) => res.end(metrics));
+});
+
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
   next(createError(404));
@@ -72,6 +78,8 @@ setInterval(() => {
     c.send(JSON.stringify(devices.visualiserListener.visualiserData));
   }
 }, 1000 / targetFps);
+
+promClient.collectDefaultMetrics();
 
 console.log("Started");
 

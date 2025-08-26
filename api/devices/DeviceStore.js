@@ -4,6 +4,7 @@ import { DemoDataColorSource } from "../colorSource/DemoDataColorSource.js";
 import { VisualiserPixelListener } from "../pixelListener/VisualiserPixelListener.js";
 import { DmxPixelListener } from "../pixelListener/DmxPixelListener.js";
 import { CompositePixelListener } from "../pixelListener/CompositePixelListener.js";
+import promClient from "prom-client";
 
 export class DeviceStore {
   async init(dao = null, colorSourceIn = null, pixelListenerIn = null) {
@@ -67,6 +68,68 @@ export class DeviceStore {
         this.colorSource = new DemoDataColorSource();
       }
     }
+    const self = this;
+
+    new promClient.Gauge({
+      name: "byop_devices",
+      help: "Count of devices registered or unregistered with byop",
+      labelNames: ["registered", "up"],
+
+      collect() {
+        const countUpAndDown = (x) =>
+          Object.values(x).reduce(
+            ([prevUp, prevDown], curr) => {
+              if (curr.up) {
+                return [prevUp + 1, prevDown];
+              } else {
+                return [prevUp, prevDown + 1];
+              }
+            },
+            [0, 0]
+          );
+        const registeredCounts = countUpAndDown(self.devices);
+        this.set({ registered: true, up: true }, registeredCounts[0]);
+        this.set({ registered: true, up: false }, registeredCounts[1]);
+
+        //TODO labels for warningsMessages?
+
+        const unregisteredCounts = countUpAndDown(self.unregisteredDevices);
+        this.set({ registered: false, up: true }, unregisteredCounts[0]);
+        this.set({ registered: false, up: false }, unregisteredCounts[1]);
+      },
+    });
+
+    new promClient.Gauge({
+      name: "byop_pixels",
+      help: "Count of pixels registered with byop",
+      labelNames: ["registered", "up"],
+
+      collect() {
+        const registeredCounts = Object.values(self.devices).reduce(
+          ([prevUp, prevDown], curr) => {
+            if (curr.up) {
+              return [prevUp + curr.pixels.length, prevDown];
+            } else {
+              return [prevUp, prevDown + curr.pixels.length];
+            }
+          },
+          [0, 0]
+        );
+        this.set({ registered: true, up: true }, registeredCounts[0]);
+        this.set({ registered: true, up: false }, registeredCounts[1]);
+      },
+    });
+
+    this.statusUpdateMetric = new promClient.Summary({
+      name: "byop_device_status_update_duration_seconds",
+      help: "How long does it take to update the status of all devices",
+    });
+
+    this.colorUpdateMetric = new promClient.Summary({
+      name: "byop_device_color_update_duration_seconds",
+      help: "How long does it take to calculate updated colors for all pixels",
+    });
+
     this.statusUpdateCount = 0;
     await this.updateDeviceStatus();
   }
@@ -212,6 +275,8 @@ export class DeviceStore {
   }
 
   updatePixelColors() {
+    const end = this.colorUpdateMetric.startTimer();
+
     const timestamp = performance.now();
 
     this.pixelListener.startedUpdatingDevices(this.colorSource.getSource());
@@ -247,12 +312,14 @@ export class DeviceStore {
       this.pixelListener.finishedUpdatingDevice(deviceId);
     }
     this.pixelListener.finishedUpdatingDevices();
+
+    end();
   }
 
   //TODO: factor out? and test
   async updateDeviceStatus() {
     console.log("updating device status (" + this.statusUpdateCount + ")");
-    console.time("updateDeviceStatus");
+    const end = this.statusUpdateMetric.startTimer();
 
     const promises = [];
 
@@ -268,7 +335,8 @@ export class DeviceStore {
     await Promise.all(promises);
 
     this.statusUpdateCount++;
-    console.timeEnd("updateDeviceStatus");
+    const seconds = end();
+    console.debug(`updateDeviceStatus - ${seconds}s`);
 
     this.statusUpdater = setTimeout(() => {
       this.updateDeviceStatus();

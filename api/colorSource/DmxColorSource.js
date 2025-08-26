@@ -1,11 +1,19 @@
 import { E131Adapter } from "./E131Adapter.js";
+import promClient from "prom-client";
 
 export class DmxColorSource {
   constructor(dmxRows, dmxColumns, adapter = E131Adapter) {
     this.dmxData = [[[[0, 0, 0]]]];
     this.dmxData.source = "";
 
+    this.updateMetric = new promClient.Summary({
+      name: "byop_dmx_in_update_duration_seconds",
+      help: "How long does it take to accept a new set of dmx data from e1.31",
+    });
+
     this.e131Adapter = new adapter((data, source) => {
+      const end = this.updateMetric.startTimer();
+
       //check we got as much as we were expecting.
       if (data.length !== dmxRows * dmxColumns * 3) {
         console.error(
@@ -22,6 +30,8 @@ export class DmxColorSource {
       );
 
       this.dmxData.source = source;
+
+      end();
     });
   }
 
