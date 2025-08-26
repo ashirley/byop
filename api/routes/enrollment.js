@@ -59,7 +59,7 @@ router.get("/devices/:deviceId/fix", function (req, res, next) {
   const device = req.devices.getDeviceById(deviceId);
 
   if (fixId === "byopPixelCount") {
-    //This doesn't require confirmation (as you it does nothing until you press save on the next screen) so shortcut
+    //This doesn't require confirmation (as it does nothing until you press save on the next screen) so shortcut
     if (req.query.fixData != null) {
       res.redirect(`/devices/${deviceId}/edit?pixelCount=${req.query.fixData}`);
       return;
@@ -113,9 +113,29 @@ router.post("/devices/:deviceId/fix", async function (req, res, next) {
       }
       break;
     case "wledPixelCountAndMode":
-    //TODO
+      try {
+        await req.devices.fixLiveMode(deviceId);
+        await req.devices.fixWledPixelCount(deviceId);
+      } catch (e) {
+        errorMessage = "Error applying wledPixelCount fix: " + e;
+      }
+      break;
     case "byopPixelCountAndMode":
-    //TODO
+      try {
+        await req.devices.fixLiveMode(deviceId);
+        if (req.query.fixData != null) {
+          res.redirect(
+            `/devices/${deviceId}/edit?pixelCount=${req.query.fixData}`
+          );
+          return;
+        } else {
+          errorMessage =
+            "Error applying byopPixelCount fix: target pixelCount must be supplied as a 'fixData' query parameter";
+        }
+      } catch (e) {
+        errorMessage = "Error applying wledPixelCount fix: " + e;
+      }
+      break;
     default:
       errorMessage = "Unknown fix, nothing could be changed";
   }

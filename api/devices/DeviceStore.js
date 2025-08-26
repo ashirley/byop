@@ -458,7 +458,7 @@ export class DeviceStore {
           retval.push({
             fixId: "byopPixelCount",
             fixData: wledPixels,
-            description: `Incorrect number of pixels configured in BYOP (${byopPixels}) compared to 1 physical pixel in WLED`,
+            description: `Incorrect number of pixels configured in BYOP (${byopPixels}) compared to physical pixels in WLED (${wledPixels})`,
           });
         retval.push({
           fixId: "liveMode",
@@ -490,7 +490,7 @@ export class DeviceStore {
                 "WLED's dmx mode is not \"Multi RGB\" which is what we'll be sending",
             });
           }
-        } /* (byopPixels === wledPixels) */ else {
+        } /* (byopPixels !== wledPixels) */ else {
           if (wledMode === SINGLE) {
             retval.push({
               fixId: "wledPixelCountAndMode",
