@@ -39,7 +39,14 @@ export class SqliteDao {
           (err, row) => {
             console.debug("Loading device " + row.id + " from database");
             //TODO: should this JSON.parse be here or in Device.parsePixels?
-            cb(row.id, row.x, row.y, row.host, JSON.parse(row.pixels));
+            try {
+              cb(row.id, row.x, row.y, row.host, JSON.parse(row.pixels));
+            } catch (e) {
+              console.error(
+                "Couldn't load device " + row.id + " from database: ",
+                e
+              );
+            }
             if (row.id > maxId) {
               maxId = row.id;
             }

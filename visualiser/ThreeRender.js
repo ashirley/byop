@@ -56,6 +56,13 @@ export class ThreeRender extends LitElement {
     const fieldMaxX = Math.max(...Object.values(this.devices).map((d) => d.x));
     const fieldMinY = Math.min(...Object.values(this.devices).map((d) => d.y));
     const fieldMaxY = Math.max(...Object.values(this.devices).map((d) => d.y));
+    console.debug(
+      `firstUpdated w/ ${
+        Object.values(this.devices).length
+      } devices and a field of ${fieldMaxX - fieldMinX}x${
+        fieldMaxY - fieldMinY
+      }`
+    );
 
     const scene = new THREE.Scene();
     const group = new THREE.Group();

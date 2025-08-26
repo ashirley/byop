@@ -32,7 +32,14 @@ export class DmxPixelListener {
   finishedUpdatingDevice(deviceId) {
     if (deviceId in this.e131Cache) {
       const [client, packet] = this.e131Cache[deviceId];
-      client.send(packet);
+      try {
+        client.send(packet);
+      } catch (error) {
+        console.error(
+          "Couldn't send e1.31 pixel data to device " + deviceId,
+          e
+        );
+      }
     }
   }
 

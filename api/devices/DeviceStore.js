@@ -685,6 +685,17 @@ export class DeviceStore {
       this.nextId = await this.db.loadRegisteredDeviceData(
         this.registerDevice0.bind(this)
       );
+      console.log(
+        "Loaded into a field of (" +
+          this.minX +
+          "," +
+          this.minY +
+          ")x(" +
+          this.maxX +
+          "," +
+          this.maxY +
+          ")"
+      );
     } else {
       this.nextId = 0;
     }
