@@ -101,12 +101,12 @@
             <label for="drawn">Drawn position</label>
         </div>
     </div>
-    <div class="newdevicesform__info newdevicesform__info--single section-single">All pixels have the same colour. TODO: how to configure this in wled</div>
+    <div class="newdevicesform__info newdevicesform__info--single section-single">All pixels have the same colour.</div>
     
-    <div class="newdevicesform__info newdevicesform__info--specified section-specified">Specify the location of the pixels. e.g. <pre>[[0,10],[50,5]]</pre>. TODO: how to configure this in wled</div>
+    <div class="newdevicesform__info newdevicesform__info--specified section-specified">Specify the location of the pixels. e.g. <pre>[[0,10],[50,5]]</pre>.</div>
     <label class="newdevicesform__pixelLocations-label section-specified" for="pixelLocations">pixel locations</label><textarea class="newdevicesform__pixelLocations-input section-specified" id="pixelLocations" name="pixelLocations" rows="5">{{existing.pixelJSON}}</textarea>
     
-    <div class="newdevicesform__info newdevicesform__info--drawn section-drawn">Specify the number of pixels and draw the shape of their layout as seen from above. TODO: how to configure this in wled</div>
+    <div class="newdevicesform__info newdevicesform__info--drawn section-drawn">Specify the number of pixels and draw the shape of their layout as seen from above.</div>
     <label class="newdevicesform__pixelCount-label section-drawn" for="pixelCount">pixel count</label><input class="newdevicesform__pixelCount-input section-drawn" id="pixelCount" name="pixelCount" type="number" value="{{default existing.pixelCount 50}}"/>
     <script type="text/paperscript" canvas="pixelLocationsCanvas">
         //TODO: add a grid to align drawing
@@ -164,8 +164,6 @@
     </script>
 
     <canvas id="pixelLocationsCanvas" resize class="section-drawn" data-initially-hidden></canvas>
-    {{!-- TODO: make this a text area (and the one above) --}}
-    {{!-- TODO: hide this? --}}
     <label class="newdevicesform__drawnPixelLocations-label section-drawn" for="drawnPixelLocations" data-initially-hidden>pixel locations</label><textarea class="newdevicesform__drawnPixelLocations-input section-drawn" id="drawnPixelLocations" name="drawnPixelLocations" readOnly rows="5" data-initially-hidden>{{existing.pixelJSON}}</textarea>
 
     <input type="submit"/>
