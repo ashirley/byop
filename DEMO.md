@@ -1,7 +1,7 @@
 
 # Demo scripts
 
-## Demo 1 {#demo1}
+## Demo 1
 
 BYOP: Bring Your Own Pixels
 

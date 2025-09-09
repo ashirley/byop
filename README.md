@@ -59,7 +59,7 @@ sACN is inherantly insecure (or at least assumes a trusted network) but with wle
 
 ## Demos
 
-* Demo 1 - [Video](https://makertube.net/w/nopRMve11MFwWB7X9ghCSL), [Script](DEMO.md#demo1).
+* Demo 1 - [Video](https://makertube.net/w/nopRMve11MFwWB7X9ghCSL), [Script](DEMO.md#demo-1).
 
 ## TODO
 
