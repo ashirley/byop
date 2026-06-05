@@ -1,6 +1,6 @@
 import e131 from "e131";
 
-import { spatialRainbow } from "@byop/demoData";
+import { spatialRainbow } from "@byop/demodata";
 
 const byopAddr = "127.0.0.1";
 const dmxRows = 13;

@@ -1,4 +1,4 @@
-import { spatialRainbow } from "@byop/demoData";
+import { spatialRainbow } from "@byop/demodata";
 
 export class DemoDataColorSource {
   getSource() {

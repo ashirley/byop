@@ -1,4 +1,4 @@
-import { sampleDevices, targetFps as demoTargetFps } from "@byop/demoData";
+import { sampleDevices, targetFps as demoTargetFps } from "@byop/demodata";
 
 export const loadDemoData = (devices) => {
   console.log("Loading DemoData");
