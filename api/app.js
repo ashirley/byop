@@ -18,7 +18,7 @@ await devices.init();
 
 // const targetFps = 30;
 const targetFps = demoTargetFps;
-if (devices.isEmpty()) {
+if (devices.isEmpty() && process.env.LOAD_DEMO_DATA === 'true') {
   loadDemoData(devices);
 }
 

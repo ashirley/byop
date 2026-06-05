@@ -5,7 +5,8 @@ const routerfn = () => {
 
   /* GET home page. */
   router.get("/", function (req, res, next) {
-    res.render("index", { title: "Express" });
+    res.redirect("index.html");
+    return;
   });
 
   router.get("/api/pixelData", function (req, res, next) {

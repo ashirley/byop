@@ -23,7 +23,9 @@
     "multer": "^1.4.5-lts.1",
     "prom-client": "^15.1.3",
     "sqlite3": "^5.1.7",
-    "why-is-node-running": "^3.2.1"
+    "why-is-node-running": "^3.2.1",
+    "@byop/demodata": "^1.0.0",
+    "@byop/visualiser": "^1.0.0"
   },
   "devDependencies": {
     "c8": "^10.1.3",
@@ -40,6 +42,13 @@
     {
       "from": "../node_modules/improv-wifi-serial-sdk/dist/**/*.js",
       "to": "public/javascripts/vendor/improv"
+    },
+    {
+      "from": [
+        "../node_modules/@byop/visualiser/dist/**/*",
+        "../node_modules/@byop/visualiser/*.png"
+      ],
+      "to": "public/visualiser/"
     }
   ],
   "c8": {
