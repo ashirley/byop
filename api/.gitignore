@@ -1,6 +1,8 @@
 public/javascripts/vendor
+public/visualiser
 .env
 byop.db
+foo.db
 coverage
 .nyc_coverage
 .nyc_output

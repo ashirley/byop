@@ -70,10 +70,12 @@ export function sampleDevices() {
   }
   return {
     devices,
-    minX: fieldMinX,
-    maxX: fieldMaxX,
-    minY: fieldMinY,
-    maxY: fieldMaxY,
+    field: {
+      minX: fieldMinX,
+      maxX: fieldMaxX,
+      minY: fieldMinY,
+      maxY: fieldMaxY
+    }
   };
 }
 

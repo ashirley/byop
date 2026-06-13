@@ -354,7 +354,7 @@ describe("DeviceStore", function () {
       ]);
       store.updatePixelColors();
 
-      td.verify(pixelListener.startedUpdatingDevices("test-source"), {
+      td.verify(pixelListener.startedUpdatingDevices("test-source", 0, 0, 0, 1), {
         times: 1,
       });
       td.verify(

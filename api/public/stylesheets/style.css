@@ -73,6 +73,12 @@ a {
   display: inline;
 }
 
+.newdevicesform__map {
+  grid-column: 1 / span 3;
+  width: 80%;
+  margin-left: 10%;
+}
+
 #pixelLocationsCanvas {
   grid-column: 1 / span 3;
   border: black 1px solid;

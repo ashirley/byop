@@ -1,7 +1,7 @@
 import { sampleDevices, spatialRainbow, targetFps } from "@byop/demodata";
 
 export const pixels = (updated) => {
-  const { devices } = sampleDevices();
+  const { devices, field } = sampleDevices();
 
   //update on an interval
   setInterval(() => {
@@ -19,7 +19,7 @@ export const pixels = (updated) => {
         pixel.b = c.b;
       }
     }
-    updated(devices);
+    updated(devices, field);
   }, 1000 / targetFps);
 
   updated(devices);

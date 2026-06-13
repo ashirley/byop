@@ -44,10 +44,7 @@
       "to": "public/javascripts/vendor/improv"
     },
     {
-      "from": [
-        "../node_modules/@byop/visualiser/dist/**/*",
-        "../node_modules/@byop/visualiser/*.png"
-      ],
+      "from": "../node_modules/@byop/visualiser/dist/**/*",
       "to": "public/visualiser/"
     }
   ],

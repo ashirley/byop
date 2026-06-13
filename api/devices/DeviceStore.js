@@ -28,6 +28,17 @@ export class DeviceStore {
       "FIELD_MAX_Y" in process.env
     );
 
+    if (!this.dynamicFieldSize && 
+      "FIELD_MIN_LAT" in process.env &&
+      "FIELD_MAX_LAT" in process.env &&
+      "FIELD_MIN_LON" in process.env &&
+      "FIELD_MAX_LON" in process.env) {
+      this.minLat = Number(process.env.FIELD_MIN_LAT);
+      this.maxLat = Number(process.env.FIELD_MAX_LAT);
+      this.minLon = Number(process.env.FIELD_MIN_LON);
+      this.maxLon = Number(process.env.FIELD_MAX_LON);
+    }
+
     if (pixelListenerIn != null) {
       this.visualiserListener = null;
       this.pixelListener = pixelListenerIn;
@@ -48,6 +59,8 @@ export class DeviceStore {
       } else {
         // create an in-memory dao
         // TODO
+        console.warn("No database specified");
+        
       }
     }
     await this.loadDeviceData();
@@ -282,7 +295,7 @@ export class DeviceStore {
 
     const timestamp = performance.now();
 
-    this.pixelListener.startedUpdatingDevices(this.colorSource.getSource());
+    this.pixelListener.startedUpdatingDevices(this.colorSource.getSource(), this.minX, this.minY, this.maxX, this.maxY);
 
     for (const [deviceId, device] of Object.entries(this.devices)) {
       for (const [pixelIndex, pixel] of Object.entries(device.pixels)) {

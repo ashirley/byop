@@ -44,6 +44,11 @@ router.get("/devices/new", function (req, res, next) {
     unregisteredDevices: latestUnregDevices,
     wifiSsid: process.env.WIFI_SSID,
     wifiPassword: process.env.WIFI_PASSWORD,
+    minX: req.devices.minX,
+    minY: req.devices.minY,
+    maxX: req.devices.maxX,
+    maxY: req.devices.maxY,
+    dynamicFieldSize: req.devices.dynamicFieldSize,
   });
 });
 
@@ -164,6 +169,11 @@ router.get("/devices/:deviceId/edit", function (req, res, next) {
       multiplePixels: (req.query.pixelCount || device.pixels.length) > 1,
       pixelJSON: JSON.stringify(device.pixels.map((d) => ({ x: d.x, y: d.y }))),
     },
+    minX: req.devices.minX,
+    minY: req.devices.minY,
+    maxX: req.devices.maxX,
+    maxY: req.devices.maxY,
+    dynamicFieldSize: req.devices.dynamicFieldSize,
   });
 });
 

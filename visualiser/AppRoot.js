@@ -3,6 +3,8 @@ import { LitElement, html, css } from "lit";
 
 import { ThreeRender } from "./ThreeRender.js";
 import { pixels as demoDataPixels } from "./DemoData.js";
+import githubMarkImgUrl from './github-mark.png'
+
 
 export class AppRoot extends LitElement {
   static properties = {
@@ -23,13 +25,15 @@ export class AppRoot extends LitElement {
     webSocket.onmessage = (event) => {
       const data = JSON.parse(event.data);
       this._devices = data.devices;
+      this._field = data.field;
       this._source = data.source;
     };
     webSocket.onerror = (event) => {
       this._demoMode = true;
-      demoDataPixels((devices) => {
+      demoDataPixels((devices, field) => {
         // take a copy to force lit to update. TODO: is there a better way?
         this._devices = { ...devices };
+        this._field = field;
         this._source = "demo-ui";
       });
     };
@@ -87,7 +91,7 @@ export class AppRoot extends LitElement {
       ${
         this._devices == null
           ? html`<p>Loading...</p>`
-          : html`<three-render .devices=${this._devices}></three-render>`
+          : html`<three-render .devices=${this._devices} .field=${this._field}></three-render>`
       }
 
       <div class="footer">
@@ -95,7 +99,7 @@ export class AppRoot extends LitElement {
         <div class="about">
           &copy;Andrew Shirley<a
             href="https://github.com/ashirley/byop"
-            ><img src="github-mark.png"
+            ><img src="${githubMarkImgUrl}"
           /></a>
         </div>
       </div>

@@ -34,6 +34,7 @@ function resizeCanvasToDisplaySize(renderer, camera) {
 export class ThreeRender extends LitElement {
   static properties = {
     devices: {},
+    field: {},
   };
 
   constructor() {
@@ -52,10 +53,10 @@ export class ThreeRender extends LitElement {
   }
 
   firstUpdated() {
-    const fieldMinX = Math.min(...Object.values(this.devices).map((d) => d.x));
-    const fieldMaxX = Math.max(...Object.values(this.devices).map((d) => d.x));
-    const fieldMinY = Math.min(...Object.values(this.devices).map((d) => d.y));
-    const fieldMaxY = Math.max(...Object.values(this.devices).map((d) => d.y));
+    const fieldMinX = this.field.minX;
+    const fieldMaxX = this.field.maxX;
+    const fieldMinY = this.field.minY;
+    const fieldMaxY = this.field.maxY;
     console.debug(
       `firstUpdated w/ ${
         Object.values(this.devices).length
@@ -82,15 +83,23 @@ export class ThreeRender extends LitElement {
       fieldMaxX - fieldMinX + 2 * DEVICE_SIZE_X,
       fieldMaxY - fieldMinY + 2 * DEVICE_SIZE_Y
     );
-    const PlaneMaterial = new THREE.MeshBasicMaterial({
-      color: 0x008800,
-      side: THREE.DoubleSide,
-      // depthFunc: THREE.LessDepth,
-      depthTest: false,
-    });
+    // const planeMaterial = new THREE.MeshBasicMaterial({
+    //   color: 0x008800,
+    //   side: THREE.DoubleSide,
+    //   // depthFunc: THREE.LessDepth,
+    //   depthTest: false,
+    // });
+
+    var light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.setScalar(10);
+    scene.add(light);
+
+    const texture = new THREE.TextureLoader().load( 'http://localhost:3000/images/map.png' );
+    // const texture = new THREE.TextureLoader().load( 'https://threejs.org/examples/textures/uv_grid_opengl.jpg' );
+    const planeMaterial = new THREE.MeshLambertMaterial( { map: texture } );
 
     //TODO: there are rendering issues with the plane in place. I wonder if they will be removed if we change the scale by 10, 100 or 1000?
-    const plane = new THREE.Mesh(planeGeometry, PlaneMaterial);
+    const plane = new THREE.Mesh(planeGeometry, planeMaterial);
     plane.translateX((fieldMaxX - fieldMinX) / 2);
     plane.translateY((fieldMaxY - fieldMinY) / 2);
     plane.translateZ(FLOOR_HEIGHT);

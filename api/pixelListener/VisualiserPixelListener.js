@@ -6,8 +6,9 @@ export class VisualiserPixelListener {
 
   newDevice() {}
 
-  startedUpdatingDevices(source) {
+  startedUpdatingDevices(source, minX, minY, maxX, maxY) {
     this.visualiserDataBuffer.source = source;
+    this.visualiserDataBuffer.field = {minX, minY, maxX, maxY}
   }
 
   updatePixelColor(deviceId, pixelIndex, r, g, b, device, pixel) {

@@ -16,7 +16,7 @@ export class DmxPixelListener {
     }
   }
 
-  startedUpdatingDevices(source) {}
+  startedUpdatingDevices(source, minX, minY, maxX, maxY) {}
 
   updatePixelColor(deviceId, pixelIndex, r, g, b) {
     if (deviceId in this.e131Cache) {

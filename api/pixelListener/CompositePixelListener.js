@@ -7,8 +7,8 @@ export class CompositePixelListener {
     this.delegates.forEach((d) => d.newDevice(id, host, pixelCount));
   }
 
-  startedUpdatingDevices(source) {
-    this.delegates.forEach((d) => d.startedUpdatingDevices(source));
+  startedUpdatingDevices(source, minX, minY, maxX, maxY) {
+    this.delegates.forEach((d) => d.startedUpdatingDevices(source, minX, minY, maxX, maxY));
   }
 
   updatePixelColor(deviceId, pixelIndex, r, g, b, device, pixel) {

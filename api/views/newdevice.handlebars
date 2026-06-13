@@ -26,6 +26,7 @@
 
 </script>
 <script src="/javascripts/combobox.js" defer></script>
+<script src="/javascripts/mapSelection.js" defer></script>
 <script type="module">
     import { startEnrollment } from "/javascripts/improvSerialProvision.js";
     window.startEnrollment = () => startEnrollment({wifiSsid: "{{wifiSsid}}", wifiPassword: "{{wifiPassword}}"});
@@ -80,9 +81,11 @@
 
     {{!-- Location --}}
     <p class="newdevicesform__info">Device Location</p>
-    <label class="newdevicesform__x-label" for="x">X</label><input class="newdevicesform__x-input" id="x" name="x" value="{{existing.x}}"/>
-    <label class="newdevicesform__y-label" for="y">Y</label><input class="newdevicesform__y-input" id="y" name="y" value="{{existing.y}}"/>
-
+    <label class="newdevicesform__x-label" for="x">X ({{#if dynamicFieldSize}}Currently {{/if}}{{minX}} - {{maxX}})</label><input class="newdevicesform__x-input" id="x" name="x" value="{{existing.x}}"/>
+    <label class="newdevicesform__y-label" for="y">Y ({{#if dynamicFieldSize}}Currently {{/if}}{{minY}} - {{maxY}})</label><input class="newdevicesform__y-input" id="y" name="y" value="{{existing.y}}"/>
+    {{#unless dynamicFieldSize}}
+        <img src="/images/map.png" onClick="updateXY(event, 'x', 'y', {{minX}}, {{minY}}, {{maxX}}, {{maxY}})" class="newdevicesform__map"/>
+    {{/unless}}
     {{!-- pixel layout --}}
     <p class="newdevicesform__info">The layout of individual pixels is used to give some local interest to the pattern.
         This isn't trying to accurately place individual pixels on the whole field and doesn't therefore have any units
