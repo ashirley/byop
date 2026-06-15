@@ -9,15 +9,14 @@ var colorSource;
 var pixelListener;
 
 beforeEach(async function () {
-  store = new DeviceStore();
   dao = td.object(["loadRegisteredDeviceData", "saveDeviceData", "shutdown"]);
   td.when(dao.loadRegisteredDeviceData(td.matchers.anything())).thenResolve(0);
   td.when(dao.shutdown()).thenResolve();
-
+  
   colorSource = td.object(["calculate", "getSource", "shutdown"]);
   td.when(colorSource.getSource()).thenReturn("test-source");
   td.when(colorSource.shutdown()).thenResolve();
-
+  
   pixelListener = td.object([
     "newDevice",
     "startedUpdatingDevices",
@@ -25,7 +24,8 @@ beforeEach(async function () {
     "finishedUpdatingDevice",
     "finishedUpdatingDevices",
   ]);
-
+  
+  store = new DeviceStore();
   await store.init(dao, colorSource, pixelListener);
 });
 

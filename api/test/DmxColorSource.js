@@ -52,6 +52,7 @@ describe("DmxColorSource", function () {
     });
 
     it("re-arranges data correctly - wide", function () {
+      source.shutdown();
       source = new DmxColorSource(2, 3, this.E131Adapter);
 
       cb = td.matchers.captor();
@@ -83,6 +84,7 @@ describe("DmxColorSource", function () {
     });
 
     it("re-arranges data correctly - tall", function () {
+      source.shutdown();
       source = new DmxColorSource(3, 2, this.E131Adapter);
 
       cb = td.matchers.captor();
@@ -237,6 +239,7 @@ describe("DmxColorSource", function () {
     });
 
     it("interpolates across a bigger input", function () {
+      source.shutdown();
       source = new DmxColorSource(3, 3, this.E131Adapter);
 
       cb = td.matchers.captor();

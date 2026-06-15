@@ -128,6 +128,7 @@ export class DmxColorSource {
   }
 
   async shutdown() {
+    promClient.register.removeSingleMetric("byop_dmx_in_update_duration_seconds");
     if (this.e131Adapter != null) {
       return this.e131Adapter.shutdown();
     } else {

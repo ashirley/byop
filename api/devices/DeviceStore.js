@@ -138,7 +138,7 @@ export class DeviceStore {
     return this.devices;
   }
 
-  getRegisteredDevices(username) {
+  getRegisteredDevicesForUser(username) {
     return Object.fromEntries(Object.entries(this.devices).filter(
       ([key, val]) => val.username==username
     ));
@@ -179,10 +179,11 @@ export class DeviceStore {
 
   /**
    * Add the device as a registered device without saving to the DB. Used internally.
-   * @param {*} id
-   * @param {*} x
-   * @param {*} y
-   * @param {*} host
+   * @param {number} id
+   * @param {string} username
+   * @param {number} x
+   * @param {number} y
+   * @param {string} host
    * @param {*} pixels
    */
   registerDevice0(id, username, x, y, host, pixels) {
@@ -708,8 +709,8 @@ export class DeviceStore {
       // },
     };
 
-    if (this.db != null) {
-      this.nextId = await this.db.loadRegisteredDeviceData(
+    if (this.dao != null) {
+      this.nextId = await this.dao.loadRegisteredDeviceData(
         this.registerDevice0.bind(this)
       );
       console.log(
@@ -730,19 +731,24 @@ export class DeviceStore {
 
   // TODO: return a promise
   saveDeviceData(id) {
-    if (this.db != null) {
+    if (this.dao != null) {
       const device = this.devices[id];
 
-      this.db.saveDeviceData(device);
+      this.dao.saveDeviceData(device);
     } else {
       console.log("No database specified so not saving new device's info");
     }
   }
 
   async shutdown() {
+    promClient.register.removeSingleMetric("byop_devices");
+    promClient.register.removeSingleMetric("byop_pixels");
+    promClient.register.removeSingleMetric("byop_device_status_update_duration_seconds");
+    promClient.register.removeSingleMetric("byop_device_color_update_duration_seconds");
+
     const promises = [];
-    if (this.db != null) {
-      promises.push(this.db.shutdown());
+    if (this.dao != null) {
+      promises.push(this.dao.shutdown());
     }
 
     if (this.colorSource != null) {
