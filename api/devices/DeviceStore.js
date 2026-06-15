@@ -1,4 +1,3 @@
-import { SqliteDao } from "../dao/SqliteDao.js";
 import { DmxColorSource } from "../colorSource/DmxColorSource.js";
 import { DemoDataColorSource } from "../colorSource/DemoDataColorSource.js";
 import { VisualiserPixelListener } from "../pixelListener/VisualiserPixelListener.js";
@@ -7,7 +6,7 @@ import { CompositePixelListener } from "../pixelListener/CompositePixelListener.
 import promClient from "prom-client";
 
 export class DeviceStore {
-  async init(dao = null, colorSourceIn = null, pixelListenerIn = null) {
+  async init(dao, colorSourceIn = null, pixelListenerIn = null) {
     this.minX = process.env.FIELD_MIN_X
       ? Number(process.env.FIELD_MIN_X)
       : null;
@@ -50,19 +49,7 @@ export class DeviceStore {
       );
     }
 
-    if (dao != null) {
-      this.db = dao;
-    } else {
-      if ("SQLITE_FILE" in process.env) {
-        this.db = new SqliteDao();
-        await this.db.init(process.env["SQLITE_FILE"]);
-      } else {
-        // create an in-memory dao
-        // TODO
-        console.warn("No database specified");
-        
-      }
-    }
+    this.dao = dao;
     await this.loadDeviceData();
 
     if (colorSourceIn != null) {
@@ -151,27 +138,45 @@ export class DeviceStore {
     return this.devices;
   }
 
-  getDeviceById(id) {
-    return this.devices[id];
+  getRegisteredDevices(username) {
+    return Object.fromEntries(Object.entries(this.devices).filter(
+      ([key, val]) => val.username==username
+    ));
+  }
+
+  getDeviceById(id, requiredUsername) {
+    const device = this.devices[id];
+    if (device != null && device.username != requiredUsername) {
+      console.log(`Tried to get a device belonging to another user. ${device.username} != ${requiredUsername}`)
+
+      throw new Error("Tried to get a device belonging to another user")
+    }
+    return device;
   }
 
   isEmpty() {
     return Object.keys(this.devices).length === 0;
   }
 
-  registerDevice(x, y, host, pixels) {
+  registerDevice(username, x, y, host, pixels) {
     const id = this.nextId++;
 
-    this.registerDevice0(id, x, y, host, pixels);
+    this.registerDevice0(id, username, x, y, host, pixels);
     this.saveDeviceData(id);
 
     return id;
   }
 
-  updateDevice(id, x, y, pixels) {
-    this.registerDevice0(id, x, y, this.devices[id].host, pixels);
+  updateDevice(id, username, x, y, pixels) {
+    if (this.devices[id].username != username) {
+      console.log(`Tried to update a device belonging to another user. ${this.devices[id].username} != ${requiredUsername}`)
+
+      throw new Error("Tried to update a device belonging to another user")
+    }
+    this.registerDevice0(id, this.devices[id].username, x, y, this.devices[id].host, pixels);
     this.saveDeviceData(id);
   }
+
   /**
    * Add the device as a registered device without saving to the DB. Used internally.
    * @param {*} id
@@ -180,13 +185,18 @@ export class DeviceStore {
    * @param {*} host
    * @param {*} pixels
    */
-  registerDevice0(id, x, y, host, pixels) {
+  registerDevice0(id, username, x, y, host, pixels) {
     if (
       host != null &&
       Object.values(this.devices).find((x) => x.host === host && x.id != id)
     ) {
       // This host is already in use
       throw new Error("Duplicate host");
+    }
+    
+    if (this.devices[id] != null && this.devices[id].username != username) {
+      // The username has changed
+      throw new Error(`Cannot change owner of a device from '${this.devices[id].username}' to '${username}'`);
     }
 
     var globalLimitsChanged = false;
@@ -235,6 +245,7 @@ export class DeviceStore {
     device.y = y;
     device.host = host;
     device.id = id;
+    device.username = username;
     device.pixels = DeviceStore.parsePixels(pixels);
 
     //calculate local min/max

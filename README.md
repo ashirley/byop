@@ -4,6 +4,8 @@ A festival site lighting system which coordinates cheap led pixels and controlle
 
 With individually addressable LEDs and their controller getting cheaper, it is feasable for most festival attendees to bring a few hundred pixels, a controller and powersupply. This project will sync them up to display a pattern across the entire site.
 
+Controllers can be either static, their location chosen on registering, or moving, where their location is updated frequently. Either way, they must register and recieve a stream of color data.
+
 ## Architecture
 
 The main service is in the **api** directory, and is responsible for managing and communicating with the controllers, receiving the control signal (DMX) and determining the color of each pixel. It also serves the administration pages for devices.
@@ -73,10 +75,12 @@ sACN is inherantly insecure (or at least assumes a trusted network) but with wle
 * error page on invalid device id page
 * pre-select "drawn" on fix page
 * limit LED count for a device or support multi universe e1.31
+* Specific message on visualiser when there are no devices
+* flash messages (via session) for user feedback
 
 ### Long term
 
-* locating a device on a map
-* user accounts
 * support for other protocols
   * DDP is a protocol which is slightly more efficient, can control more pixels per packet, and can only send changed data.
+* fix tests then run in CI
+* Big UX/UI pass

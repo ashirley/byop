@@ -20,23 +20,6 @@ const routerfn = () => {
     });
   });
 
-  router.post("/devices", function (req, res, next) {
-    req.devices.registerDevice(
-      req.body.id,
-      req.body.x,
-      req.body.y,
-      req.body.host
-    );
-    res.render("devices", {
-      registeredDevices: req.devices.getRegisteredDevices(),
-    });
-  });
-
-  // router.get("/devices/:deviceId", function (req, res, next) {
-  //   const id = req.params.deviceId;
-  //   res.render("devices", { title: "Express" });
-  // });
-
   return router;
 };
 

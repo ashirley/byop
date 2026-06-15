@@ -18,12 +18,13 @@ router.get("/", function (req, res, next) {
 router.get("/devices", function (req, res, next) {
   res.render("devices", {
     //TODO: proper paging, not just static top 10
-    registeredDevices: page(req.devices.getRegisteredDevices(), 0, 10),
+    registeredDevices: page(req.devices.getRegisteredDevicesForUser(req.session.user), 0, 10),
   });
 });
 
 router.post("/devices/new", function (req, res, next) {
   const newId = req.devices.registerDevice(
+    req.session.user,
     Number(req.body.x),
     Number(req.body.y),
     req.body.host,
@@ -54,14 +55,14 @@ router.get("/devices/new", function (req, res, next) {
 
 router.get("/devices/:deviceId", function (req, res, next) {
   const id = req.params.deviceId;
-  const device = req.devices.getDeviceById(id);
+  const device = req.devices.getDeviceById(id, req.session.user);
   res.render("device", { device });
 });
 
 router.get("/devices/:deviceId/fix", function (req, res, next) {
   const deviceId = req.params.deviceId;
   const fixId = req.query.fixId;
-  const device = req.devices.getDeviceById(deviceId);
+  const device = req.devices.getDeviceById(deviceId, req.session.user);
 
   if (fixId === "byopPixelCount") {
     //This doesn't require confirmation (as it does nothing until you press save on the next screen) so shortcut
@@ -99,7 +100,7 @@ router.get("/devices/:deviceId/fix", function (req, res, next) {
 router.post("/devices/:deviceId/fix", async function (req, res, next) {
   const deviceId = req.params.deviceId;
   const fixId = req.query.fixId;
-  const device = req.devices.getDeviceById(deviceId);
+  const device = req.devices.getDeviceById(deviceId, req.session.user);
 
   var errorMessage;
   switch (fixId) {
@@ -158,7 +159,7 @@ router.post("/devices/:deviceId/fix", async function (req, res, next) {
 
 router.get("/devices/:deviceId/edit", function (req, res, next) {
   const id = req.params.deviceId;
-  const device = req.devices.getDeviceById(id);
+  const device = req.devices.getDeviceById(id, req.session.user);
 
   res.render("newdevice", {
     existing: {
@@ -180,6 +181,7 @@ router.get("/devices/:deviceId/edit", function (req, res, next) {
 router.post("/devices/:deviceId/edit", function (req, res, next) {
   req.devices.updateDevice(
     req.params.deviceId,
+    req.session.user,
     Number(req.body.x),
     Number(req.body.y),
     JSON.parse(

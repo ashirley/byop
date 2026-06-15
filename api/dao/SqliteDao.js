@@ -13,9 +13,26 @@ export class SqliteDao {
       this.db.serialize(() => {
         // initialise the schema
         this.db.run(
-          "CREATE TABLE IF NOT EXISTS device (id NUMERIC, x NUMERIC, y NUMERIC, host TEXT, pixels TEXT)",
+          "CREATE TABLE IF NOT EXISTS device (id NUMERIC, username TEXT,x NUMERIC, y NUMERIC, host TEXT, pixels TEXT)",
           //TODO: error handling
           function (err) {
+            if (err) {
+              //TODO: error handling
+              console.log(err)
+              reject(err);
+            }
+            resolve();
+          }
+        );
+        this.db.run(
+          "CREATE TABLE IF NOT EXISTS user (username TEXT, passwordHash TEXT, admin BOOLEAN)",
+          //TODO: error handling
+          function (err) {
+            if (err) {
+              //TODO: error handling
+              console.log(err)
+              reject(err);
+            }
             resolve();
           }
         );
@@ -40,7 +57,7 @@ export class SqliteDao {
             console.debug("Loading device " + row.id + " from database");
             //TODO: should this JSON.parse be here or in Device.parsePixels?
             try {
-              cb(row.id, row.x, row.y, row.host, JSON.parse(row.pixels));
+              cb(row.id, row.username, row.x, row.y, row.host, JSON.parse(row.pixels));
             } catch (e) {
               console.error(
                 "Couldn't load device " + row.id + " from database: ",
@@ -67,17 +84,60 @@ export class SqliteDao {
   saveDeviceData(device) {
     if (this.saveDeviceStmt == null) {
       this.saveDeviceStmt = this.db.prepare(
-        "INSERT INTO device VALUES (?, ?, ?, ?, ?)"
+        "INSERT INTO device VALUES (?, ?, ?, ?, ?, ?)"
       );
     }
     this.saveDeviceStmt.run(
       device.id,
+      device.username,
       device.x,
       device.y,
       device.host,
       JSON.stringify(device.pixels)
     );
     // TODO: error handling
+  }
+
+  async getUser(username) {
+    return new Promise((resolve, reject) => {
+      this.db.serialize(() => {
+        this.db.get(
+          "SELECT * FROM user WHERE username=?", username,
+          function (err, row) {
+            // console.log("getUser", err, row)
+            if (err) {
+              //TODO: error handling
+              console.log(err)
+              reject(err);
+            }
+            resolve(row);
+          }
+        );
+      });
+    });
+  }
+
+  async storeUser(user) {
+    // console.log(`Storing user ${JSON.stringify(user)}`)
+    return new Promise((resolve, reject) => {
+      this.db.serialize(() => {
+        this.db.run(
+          "INSERT INTO user VALUES (?, ?, ?)", user.username, user.passwordHash, false,
+          function (err) {
+            // console.log("storeUser", err, this.changes, this.lastID)
+            if (err) {
+              console.log(`err ${err}`)
+
+              //TODO: error handling
+              reject(err);
+            }
+
+            resolve();
+          }
+        );
+      });
+    });
+
   }
 
   async shutdown() {

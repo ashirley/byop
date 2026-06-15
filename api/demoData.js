@@ -5,6 +5,7 @@ export const loadDemoData = (devices) => {
   const sampleDevicesObj = sampleDevices();
   for (const [_, device] of Object.entries(sampleDevicesObj.devices)) {
     devices.registerDevice(
+      "initialUser",
       device.x,
       device.y,
       null,
@@ -12,8 +13,8 @@ export const loadDemoData = (devices) => {
     );
   }
 
-  // devices.registerDevice(1, 0, 0, "192.168.1.97");
-  // devices.registerDevice(2, 137500, 62500, "192.168.1.98", [
+  // devices.registerDevice(null, 1, 0, 0, "192.168.1.97");
+  // devices.registerDevice(null, 2, 137500, 62500, "192.168.1.98", [
   //   [0, 0],
   //   { x: 625, y: 625 },
   // ]); //example of 2 ways of specifying pixel position

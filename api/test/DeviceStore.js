@@ -36,8 +36,9 @@ afterEach(async function () {
 describe("DeviceStore", function () {
   describe("#registerDevice()", function () {
     it("registered device should persist", function () {
-      store.registerDevice(1, 2, "fooHost", [[1, 1]]);
+      store.registerDevice("joe.bloggs", 1, 2, "fooHost", [[1, 1]]);
       assert.equal(store.getRegisteredDevices()[0].host, "fooHost");
+      assert.equal(store.getRegisteredDevices()[0].username, "joe.bloggs");
       assert.equal(store.getRegisteredDevices()[0].up, null); //assert this to make sure the similar assertion below isn't a false positive
       td.verify(
         dao.saveDeviceData(
@@ -54,16 +55,16 @@ describe("DeviceStore", function () {
 
     it("existing unregistered device should be removed when registered", function () {
       store.markDeviceUp("barHost");
-      store.registerDevice(1, 2, "barHost", [[1, 1]]);
+      store.registerDevice("joe.bloggs", 1, 2, "barHost", [[1, 1]]);
 
       assert.equal(Object.keys(store.getUnregisteredDevices()).length, 0);
       assert.equal(store.getRegisteredDevices()[0].up, true); // make sure this has been copied from the unregistered device record
     });
 
     it("registered device cannot duplicate host", function () {
-      store.registerDevice(1, 2, "fooHost", [[1, 1]]);
+      store.registerDevice("joe.bloggs", 1, 2, "fooHost", [[1, 1]]);
       assert.throws(
-        () => store.registerDevice(3, 4, "fooHost", [[1, 1]]),
+        () => store.registerDevice("joe.bloggs", 3, 4, "fooHost", [[1, 1]]),
         /Duplicate host/
       );
 
@@ -79,7 +80,7 @@ describe("DeviceStore", function () {
     });
 
     it("dynamic field is same as single registered device", function () {
-      store.registerDevice(1, 2, "barHost", [[1, 1]]);
+      store.registerDevice("joe.bloggs", 1, 2, "barHost", [[1, 1]]);
 
       assert.equal(store.minX, 1);
       assert.equal(store.maxX, 1);
@@ -88,8 +89,8 @@ describe("DeviceStore", function () {
     });
 
     it("dynamic field spans 2 registered devices", function () {
-      store.registerDevice(1, 2, "fooHost", [[1, 1]]);
-      store.registerDevice(3, 4, "barHost", [[1, 1]]);
+      store.registerDevice("joe.bloggs", 1, 2, "fooHost", [[1, 1]]);
+      store.registerDevice("joe.bloggs", 3, 4, "barHost", [[1, 1]]);
 
       assert.equal(store.minX, 1);
       assert.equal(store.maxX, 3);
@@ -104,9 +105,9 @@ describe("DeviceStore", function () {
     });
 
     it("dynamic field uneffected by new in-range device", function () {
-      store.registerDevice(1, 2, "fooHost", [[1, 1]]);
-      store.registerDevice(3, 4, "barHost", [[1, 1]]);
-      store.registerDevice(2, 3, "bazHost", [[1, 1]]);
+      store.registerDevice("joe.bloggs", 1, 2, "fooHost", [[1, 1]]);
+      store.registerDevice("joe.bloggs", 3, 4, "barHost", [[1, 1]]);
+      store.registerDevice("joe.bloggs", 2, 3, "bazHost", [[1, 1]]);
 
       assert.equal(store.minX, 1);
       assert.equal(store.maxX, 3);
@@ -119,8 +120,8 @@ describe("DeviceStore", function () {
     });
 
     it("dynamic field spans 2 registered devices - max first", function () {
-      store.registerDevice(3, 4, "barHost", [[1, 1]]);
-      store.registerDevice(1, 2, "fooHost", [[1, 1]]);
+      store.registerDevice("joe.bloggs", 3, 4, "barHost", [[1, 1]]);
+      store.registerDevice("joe.bloggs", 1, 2, "fooHost", [[1, 1]]);
 
       assert.equal(store.minX, 1);
       assert.equal(store.maxX, 3);
@@ -149,9 +150,9 @@ describe("DeviceStore", function () {
         assert.equal(store.minY, 30);
         assert.equal(store.maxY, 40);
 
-        store.registerDevice(15, 35, "fooHost", [[1, 1]]);
-        store.registerDevice(5, 45, "barHost", [[1, 1]]);
-        store.registerDevice(25, 5, "bazHost", [[1, 1]]);
+        store.registerDevice("joe.bloggs", 15, 35, "fooHost", [[1, 1]]);
+        store.registerDevice("joe.bloggs", 5, 45, "barHost", [[1, 1]]);
+        store.registerDevice("joe.bloggs", 25, 5, "bazHost", [[1, 1]]);
 
         td.verify(
           dao.saveDeviceData(
@@ -189,9 +190,9 @@ describe("DeviceStore", function () {
     });
 
     it("normalised positions updated when dynamic field changes", function () {
-      store.registerDevice(1, 2, "fooHost", [[1, 1]]);
-      store.registerDevice(3, 4, "barHost", [[1, 1]]);
-      store.registerDevice(5, 6, "bazHost", [[1, 1]]);
+      store.registerDevice("joe.bloggs", 1, 2, "fooHost", [[1, 1]]);
+      store.registerDevice("joe.bloggs", 3, 4, "barHost", [[1, 1]]);
+      store.registerDevice("joe.bloggs", 5, 6, "bazHost", [[1, 1]]);
 
       assert.equal(store.minX, 1);
       assert.equal(store.maxX, 5);
@@ -206,7 +207,7 @@ describe("DeviceStore", function () {
     });
 
     it("pixel local coordinates", function () {
-      store.registerDevice(1, 2, "fooHost", [
+      store.registerDevice("joe.bloggs", 1, 2, "fooHost", [
         [1, 1],
         [11, 11],
         [6, 6],
@@ -244,7 +245,7 @@ describe("DeviceStore", function () {
     });
 
     it("markDeviceUp should consider existing registeredDevices record", function () {
-      const id = store.registerDevice(1, 2, "barHost", [[1, 1]]);
+      const id = store.registerDevice("joe.bloggs", 1, 2, "barHost", [[1, 1]]);
 
       store.markDeviceUp("barHost");
 
@@ -347,8 +348,8 @@ describe("DeviceStore", function () {
         )
       ).thenReturn({ r: 1, g: 1, b: 0 });
 
-      store.registerDevice(0, 0, "fooHost", [[1, 1]]);
-      store.registerDevice(0, 1, "barHost", [
+      store.registerDevice("joe.bloggs", 0, 0, "fooHost", [[1, 1]]);
+      store.registerDevice("joe.bloggs", 0, 1, "barHost", [
         [1, 1],
         [1, 1],
       ]);
@@ -400,4 +401,6 @@ describe("DeviceStore", function () {
       td.verify(pixelListener.finishedUpdatingDevices(), { times: 1 });
     });
   });
+
+  //TODO: Add tests for different usernames.
 });
