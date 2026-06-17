@@ -6,6 +6,24 @@ With individually addressable LEDs and their controller getting cheaper, it is f
 
 Controllers can be either static, their location chosen on registering, or moving, where their location is updated frequently. Either way, they must register and recieve a stream of color data.
 
+## Running locally
+
+### Latest from docker
+
+A docker image is built from the bleeding-edge code as `ghcr.io/ashirley/byop:latest` and includes both the api and visualiser.
+
+By default, the container won't persist anything when it shuts down. To persist data, 2 environment variables need to be provided: 
+* `SQLITE_FILE` pointing to a file (which will be created on first start) in a volume mounted directory
+* `SESSION_SECRET`. If this isn't provided, when the container restarts, it will terminate all existing user UI sessions (but devices will continue functioning).
+
+Other variables which can be provided are documented in [api/sample.env](api/sample.env)
+
+For example:
+
+```sh
+docker run -it --rm -v $(pwd)/byop:/data -p 3000:3000 -e SQLITE_FILE=/data/byop.db -e SESSION_SECRET=eFJmHdemz8q82dVjRNfQLYEkrqUJtaWcEdmgd3qF5VU ghcr.io/ashirley/byop:latest
+```
+
 ## Architecture
 
 The main service is in the **api** directory, and is responsible for managing and communicating with the controllers, receiving the control signal (DMX) and determining the color of each pixel. It also serves the administration pages for devices.
