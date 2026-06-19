@@ -2,9 +2,11 @@ FROM node:25
 
 EXPOSE 3000 5568
 # By default, keep the database in the container. Mount a volume and change this to persist the database.
-ENV SQLITE_FILE=/byop.db
+ENV SQLITE_FILE=/data/byop.db
 # By default don't load demo data, start with no devices registered.
 ENV LOAD_DEMO_DATA=false
+
+RUN mkdir /data
 
 RUN mkdir /app
 WORKDIR /app

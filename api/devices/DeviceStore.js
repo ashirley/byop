@@ -55,17 +55,17 @@ export class DeviceStore {
     if (colorSourceIn != null) {
       this.colorSource = colorSourceIn;
     } else {
-      const listenForDmx = true;
-      if (listenForDmx) {
+      if ("DEMO_DMX_INPUT" in process.env && process.env["DEMO_DMX_INPUT"] == "true") {
+        //setup a demodata color source
+        this.colorSource = new DemoDataColorSource();
+        console.log("Using demo data source")
+      } else {
         //setup an sACN server to receive data
         //TODO: make this configurable and support only using a slice of the data we receive on the universe.
         const dmxRows = 13;
         const dmxColumns = 13;
 
         this.colorSource = new DmxColorSource(dmxRows, dmxColumns);
-      } else {
-        //setup a demodata color source
-        this.colorSource = new DemoDataColorSource();
       }
     }
     const self = this;

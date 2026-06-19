@@ -12,16 +12,18 @@ Controllers can be either static, their location chosen on registering, or movin
 
 A docker image is built from the bleeding-edge code as `ghcr.io/ashirley/byop:latest` and includes both the api and visualiser.
 
-By default, the container won't persist anything when it shuts down. To persist data, 2 environment variables need to be provided: 
-* `SQLITE_FILE` pointing to a file (which will be created on first start) in a volume mounted directory
-* `SESSION_SECRET`. If this isn't provided, when the container restarts, it will terminate all existing user UI sessions (but devices will continue functioning).
+By default, the container won't persist anything when it shuts down. To reliably persist data, 2 things need to be configured: 
+
+The **database file** (which will be created on first start) should be in a volume mounted directory. By default, this is stored in /data which can be mounted in or the `SQLITE_FILE` environment variable can point to a file anywhere in the container.
+
+The **session secret** is provided in the `SESSION_SECRET` environment variable and should be set consistently otherwise, when the container restarts, it will terminate all existing user UI sessions (but devices will continue functioning).
 
 Other variables which can be provided are documented in [api/sample.env](api/sample.env)
 
 For example:
 
 ```sh
-docker run -it --rm -v $(pwd)/byop:/data -p 3000:3000 -e SQLITE_FILE=/data/byop.db -e SESSION_SECRET=eFJmHdemz8q82dVjRNfQLYEkrqUJtaWcEdmgd3qF5VU ghcr.io/ashirley/byop:latest
+docker run -it --rm -v $(pwd)/byop:/data -p 3000:3000 -p 5567:5567 -e SESSION_SECRET=eFJmHdemz8q82dVjRNfQLYEkrqUJtaWcEdmgd3qF5VU ghcr.io/ashirley/byop:latest
 ```
 
 ## Architecture
