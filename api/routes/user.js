@@ -27,14 +27,17 @@ export const userUnauthenticatedRouterFn = () => {
       });
     } else {
       // wrong username/password
+      req.session.flash = "Incorrect username/password";
       res.redirect('/user/login');
     }
   });
 
   router.post("/register", async function (req, res, next) {
     if (await req.users.register(req.body.user, req.body.pass)) {
+      req.session.flash = "Registered, please log in";
       res.redirect('/user/login');
     } else {
+      req.session.flash = "Couldn't register you, please try again.";
       res.redirect('/user/login');
     }
   });
@@ -58,6 +61,7 @@ export const userAuthenticatedRouterFn = () => {
     // this will ensure that re-using the old session id
     // does not have a logged in user
     req.session.user = null;
+    req.session.flash = "Logged Out";
     req.session.save(function (err) {
       if (err) next(err);
 

@@ -103,6 +103,14 @@ app.use(function (req, res, next) {
   next();
 });
 
+// show the flash message and clear for next time.
+//TODO: Only do this if we are rendering a page, not if we are redirecting as it will get lost
+app.use(function (req, res, next) {
+  res.locals.flash = req.session.flash;
+  req.session.flash = null;
+  next();
+});
+
 function isAuthenticatedWrap(router) {
   return (req, res, next) => {
     if (req.session.user) {
@@ -138,7 +146,7 @@ app.use(function (req, res, next) {
 app.use(function (err, req, res, next) {
   if (err instanceof TypeError && err.message == "Secret key must be provided.") {
     res.clearCookie(SESSION_COOKIE_NAME);
-    res.redirect("/user/login");
+    res.redirect("#");
   }
   next();
 });
