@@ -122,7 +122,7 @@ export class SqliteDao {
     return new Promise((resolve, reject) => {
       this.db.serialize(() => {
         this.db.run(
-          "INSERT INTO user VALUES (?, ?, ?)", user.username, user.passwordHash, false,
+          "INSERT INTO user VALUES (?, ?, ?)", user.username, user.passwordHash, user.admin,
           function (err) {
             // console.log("storeUser", err, this.changes, this.lastID)
             if (err) {

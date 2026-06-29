@@ -122,8 +122,20 @@ function isAuthenticatedWrap(router) {
   }
 }
 
+function isAdminWrap(router) {
+  return (req, res, next) => {
+    if (req.session.user && req.users.getUser(req.session.user).admin) {
+      console.log(JSON.stringify(req.session.user, req.users.getUser(req.session.user)))
+      router(req, res, next)
+    }
+    else {
+      next();
+    }
+  }
+}
+
 app.use("/", isAuthenticatedWrap(enrollmentRouter));
-app.use("/visualiser", isAuthenticatedWrap(visualiserRouter));
+app.use("/visualiser", isAdminWrap(visualiserRouter));
 app.use("/user", isAuthenticatedWrap(userAuthenticatedRouter));
 app.use("/user", userUnauthenticatedRouter);
 

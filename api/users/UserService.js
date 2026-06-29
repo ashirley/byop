@@ -3,6 +3,12 @@ import { argon2, randomBytes } from 'crypto'
 export class UserService {
   constructor(dao) {
     this.dao = dao;
+
+    if ("ADMINS" in process.env) {
+      this.adminUsernames = process.env["ADMINS"].split(",");
+    } else {
+      this.adminUsernames = ["root"];
+    }
   }
 
   async validatePassword(username, pass) {
@@ -22,17 +28,29 @@ export class UserService {
 
   async register(username, pass) {
     //TODO: promClient
+
+    if (!/^[A-Za-z0-9]+$/.test(username)) {
+      console.warn("Tried to register a user with unexpected characters: " + username)
+      return false;
+    }
+
     const existingUser = await this.dao.getUser(username);
     if (existingUser != null) {
       console.warn("Tried to register a user that already exists: " + username)
       return false;
     }
 
+    const admin = this.adminUsernames.includes(username);
     const salt = randomBytes(16);
     const hash = await this.hashPassword(pass, salt)
 
-    await this.dao.storeUser({username: username, passwordHash: `${salt.toString('hex')}:${hash}`})
+    await this.dao.storeUser({username: username, passwordHash: `${salt.toString('hex')}:${hash}`, admin})
     return true;
+  }
+
+  async getUser(username) {
+    let {passwordHash: _, ...userWithoutPassword} =  await this.dao.getUser(username);
+    return userWithoutPassword
   }
 
   async hashPassword(pass, salt) {
