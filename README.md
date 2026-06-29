@@ -16,7 +16,7 @@ By default, the container won't persist anything when it shuts down. To reliably
 
 The **database file** (which will be created on first start) should be in a volume mounted directory. By default, this is stored in /data which can be mounted in or the `SQLITE_FILE` environment variable can point to a file anywhere in the container.
 
-The **session secret** is provided in the `SESSION_SECRET` environment variable and should be set consistently otherwise, when the container restarts, it will terminate all existing user UI sessions (but devices will continue functioning).
+The **session secret** is provided in the `SESSION_SECRET` environment variable and should be set consistently otherwise, when the container restarts, it will terminate all existing user UI sessions (but devices will continue functioning). When run without this, a suitable secret is generated and logged for use next time.
 
 Other variables which can be provided are documented in [api/sample.env](api/sample.env)
 
@@ -96,7 +96,6 @@ sACN is inherantly insecure (or at least assumes a trusted network) but with wle
 * pre-select "drawn" on fix page
 * limit LED count for a device or support multi universe e1.31
 * Specific message on visualiser when there are no devices
-* flash messages (via session) for user feedback
 
 ### Long term
 
